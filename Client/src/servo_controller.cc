@@ -97,42 +97,32 @@ void ServoController::SetExtClock(uint8_t prescale) {
 }
 
 void ServoController::SetPWMFreq(float freq) {
-    uint8_t buffer[2] = { PCA9685_MODE1, 0 };
+    //uint8_t buffer[2] = { PCA9685_MODE1, 0 };
     freq = std::fmaxf(std::fminf(freq, 3500), 1);
 
     float prescaleval = ((oscillator_freq / (freq * 4096.0)) + 0.5) - 1;
     prescaleval = std::fmaxf(std::fminf(prescaleval, PCA9685_PRESCALE_MAX), PCA9685_PRESCALE_MIN);
 
-    WriteRead(buffer, 1, buffer + 1, 1);
-    uint8_t oldmode = buffer[1];
+    uint8_t oldmode = WriteReadReg(PCA9685_MODE1);
     uint8_t newmode = (oldmode & ~MODE1_RESTART) | MODE1_SLEEP;
 
-    buffer[1] = newmode;
-    Write(buffer, 2);
-
-    buffer[0] = PCA9685_PRESCALE;
-    buffer[1] = uint8_t(prescaleval);
-    Write(buffer, 2);
-
-    buffer[0] = PCA9685_MODE1;
-    buffer[1] = oldmode;
-    Write(buffer, 2);
+    WriteReg(PCA9685_MODE1, newmode);
+    WriteReg(PCA9685_PRESCALE, uint8_t(prescaleval));
+    WriteReg(PCA9685_MODE1, oldmode);
 
     usleep(5'000);
 
-    buffer[0] = PCA9685_MODE1;
-    buffer[1] = oldmode | MODE1_RESTART | MODE1_AI;
-    Write(buffer, 2);
+    WriteReg(PCA9685_MODE1, oldmode | MODE1_RESTART | MODE1_AI);
 }
 
 void ServoController::SetOutputMode(bool totempole) {
-    uint8_t buffer[2] = { PCA9685_MODE2, 0 };
-    WriteRead(buffer, 1, buffer + 1, 1);
+    uint8_t mode = WriteReadReg(PCA9685_MODE2);
 
-    buffer[1] = totempole
-        ? buffer[1] | MODE2_OUTDRV
-        : buffer[1] &~MODE2_OUTDRV;
-    Write(buffer, 2);
+    mode = totempole
+        ? mode | MODE2_OUTDRV
+        : mode &~MODE2_OUTDRV;
+
+    WriteReg(PCA9685_MODE2, mode);
 }
 
 uint16_t ServoController::GetPWM(uint8_t channel, bool off) {
@@ -169,9 +159,7 @@ void ServoController::SetPin(uint8_t channel, uint16_t val, bool invert) {
 }
 
 uint8_t ServoController::ReadPrescale() {
-    uint8_t buffer[1] = { PCA9685_PRESCALE };
-    WriteRead(buffer, 1, buffer, 1);
-    return buffer[0];
+    return WriteReadReg(PCA9685_PRESCALE);
 }
 
 void ServoController::Write_us(uint8_t channel, uint16_t us) {
