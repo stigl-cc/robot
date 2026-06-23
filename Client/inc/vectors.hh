@@ -9,16 +9,22 @@ struct Vector3 {
     Vector3 Up(), Right(), Forward();
 };
 
-extern Vector3 operator+(Vector3, Vector3);
-extern Vector3 operator-(Vector3, Vector3);
-extern Vector3 operator*(Vector3, Vector3);
-extern Vector3 operator/(Vector3, Vector3);
-extern Vector3 operator-(Vector3);
-extern Vector3 operator*(Vector3, float);
-extern Vector3 operator/(Vector3, float);
-extern Vector3 operator*(float, Vector3);
-extern Vector3 operator/(float, Vector3);
+extern Vector3 operator+(const Vector3&, const Vector3&);
+extern Vector3 operator-(const Vector3&, const Vector3&);
+extern Vector3 operator*(const Vector3&, const Vector3&);
+extern Vector3 operator/(const Vector3&, const Vector3&);
+extern Vector3 operator-(const Vector3&);
+extern Vector3 operator*(const Vector3&, float);
+extern Vector3 operator/(const Vector3&, float);
+extern Vector3 operator*(float, const Vector3&);
+extern Vector3 operator/(float, const Vector3&);
 
+extern Vector3& operator+=(Vector3&, const Vector3&);
+extern Vector3& operator-=(Vector3&, const Vector3&);
+extern Vector3& operator*=(Vector3&, const Vector3&);
+extern Vector3& operator/=(Vector3&, const Vector3&);
+extern Vector3& operator*=(Vector3&, float);
+extern Vector3& operator/=(Vector3&, float);
 
 struct Vector2 {
     float X, Y;

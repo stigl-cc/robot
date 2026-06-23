@@ -2,6 +2,7 @@
 #include <i2c_device.hh>
 #include <vectors.hh>
 
+#include <chrono>
 #include <cstdint>
 
 // MPU6050
@@ -10,22 +11,27 @@ class Gyroscope : private I2cDevice {
     static constexpr uint8_t
         i2c_address = 0x68;
 
+    bool is_upside_down = true, angle_unset = true;
+    float gyro_lsb_to_degsec, accel_lsb_to_g;
+
+    Vector3 offset_accel, offset_gyro;
+
+    std::chrono::steady_clock::time_point last_time;
     public:
+    Vector3 angle;
+    float temp;
+    Vector3 accel, gyro;
+
     Gyroscope(int i2c_adapter);
 
     bool Begin();
+    void Calibrate();
 
-    void CalcGyroOffsets(), CalcAccelOffsets();
+    void CalculateAngles(double deltaTime);
+    void ReadRawData();
+    void Update();
 
-    uint8_t SetGyroConfig(int), SetAccelConfig(int);
-
-    void SetFilterGyroCoef(float), SetFilterAccelCoef(float);
-    
-    Vector3 SetGyroOffset(), SetAccelOffset();
-    Vector3 GetGyroOffset(), GetAccelOffset();
-
-    Vector3 GetAccel();
-    Vector3 GetAccelAngle();
-
-    Vector3 GetAngle();
+    uint8_t
+        SetGyroConfig(int),
+        SetAccelConfig(int);
 };

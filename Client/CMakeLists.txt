@@ -11,3 +11,5 @@ aux_source_directory(src CLIENT_SOURCES)
 add_executable(client ${CLIENT_SOURCES})
 target_include_directories(client PRIVATE inc)
 target_compile_options(client PRIVATE -Wall -Wextra -Wpedantic)
+
+target_link_options(client PRIVATE -static-libgcc -static-libstdc++ -static)

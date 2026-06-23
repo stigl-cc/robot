@@ -36,15 +36,21 @@ Vector3 Vector3::Up() {
     };
 }
 
-Vector3 operator+(Vector3 a, Vector3 b) { return { a.X + b.X, a.Y + b.Y, a.Z + b.Z }; }
-Vector3 operator-(Vector3 a, Vector3 b) { return { a.X - b.X, a.Y - b.Y, a.Z - b.Z }; }
-Vector3 operator*(Vector3 a, Vector3 b) { return { a.X * b.X, a.Y * b.Y, a.Z * b.Z }; }
-Vector3 operator/(Vector3 a, Vector3 b) { return { a.X / b.X, a.Y / b.Y, a.Z / b.Z }; }
-Vector3 operator-(Vector3 a) { return { -a.X, -a.Y, -a.Z }; }
-Vector3 operator*(Vector3 a, float b) { return { a.X * b, a.Y * b, a.Z * b }; }
-Vector3 operator/(Vector3 a, float b) { return { a.X / b, a.Y / b, a.Z / b }; }
+Vector3 operator+(const Vector3& a, const Vector3& b) { return { a.X + b.X, a.Y + b.Y, a.Z + b.Z }; }
+Vector3 operator-(const Vector3& a, const Vector3& b) { return { a.X - b.X, a.Y - b.Y, a.Z - b.Z }; }
+Vector3 operator*(const Vector3& a, const Vector3& b) { return { a.X * b.X, a.Y * b.Y, a.Z * b.Z }; }
+Vector3 operator/(const Vector3& a, const Vector3& b) { return { a.X / b.X, a.Y / b.Y, a.Z / b.Z }; }
+Vector3 operator-(const Vector3& a) { return { -a.X, -a.Y, -a.Z }; }
+Vector3 operator*(const Vector3& a, float b) { return { a.X * b, a.Y * b, a.Z * b }; }
+Vector3 operator/(const Vector3& a, float b) { return { a.X / b, a.Y / b, a.Z / b }; }
 Vector3 operator*(float b, Vector3 a) { return a * b; }
-Vector3 operator/(float b, Vector3 a) { return a * b; }
+
+Vector3& operator+=(Vector3& a, const Vector3& b) { a = a + b; return a; }
+Vector3& operator-=(Vector3& a, const Vector3& b) { a = b - b; return a; }
+Vector3& operator*=(Vector3& a, const Vector3& b) { a = a * b; return a; }
+Vector3& operator/=(Vector3& a, const Vector3& b) { a = a / b; return a; }
+Vector3& operator*=(Vector3& a, float b) { a = a * b; return a; }
+Vector3& operator/=(Vector3& a, float b) { a = a / b; return a; } 
 
 Vector2 Vector2::Right() {
     return {
