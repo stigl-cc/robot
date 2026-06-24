@@ -1,8 +1,9 @@
-#include <iomanip>
+#include "video_capture.hh"
+#include <iostream>
 #include <servo_controller.hh>
 #include <gyroscope.hh>
 #include <unistd.h>
-#include <iostream>
+#include <linux/videodev2.h>
 
 int main() {
     /*    uint8_t servo_min = 0, servo_max = 5;
@@ -23,6 +24,7 @@ int main() {
         usleep(10'000);
         }*/
 
+    /*
     Gyroscope gyro(1);
     std::cout << "Initializing gyro with " << gyro.Begin() << "\n";
     std::cout << "Do not move the Gyro, calibrating!\n";
@@ -37,5 +39,14 @@ int main() {
         usleep(300'000);
     }
 
-    
+    */
+    VideoCapture video(0);
+
+    const void* video_buffer = nullptr;
+    int video_buffer_len;
+    video_buffer_len = video.GetVideoBuffer(&video_buffer);
+
+    video.CaptureFrame();
+
+    std::cerr << video.Open() << "\n";
 }

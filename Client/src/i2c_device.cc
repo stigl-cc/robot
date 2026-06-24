@@ -1,5 +1,6 @@
 #include <i2c_device.hh>
 
+#include <format>
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
 #include <fcntl.h>
@@ -38,7 +39,7 @@ bool I2cDevice::Open() {
     if(fd > 0)
         return false;
 
-    std::string device_file = (std::string("/dev/i2c-") + std::to_string(adapter));
+    std::string device_file = std::format("/dev/i2c-{}", adapter);
     if((fd = open(device_file.c_str(), O_RDWR)) < 0) { return false; }
 
     if(ioctl(fd, I2C_SLAVE, address) < 0) {
