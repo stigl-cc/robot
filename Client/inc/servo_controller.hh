@@ -5,6 +5,7 @@
 // PCA9685
 class ServoController : private I2cDevice {
     protected:
+    const char* log_tag = "ServoController: ";
     static constexpr uint8_t
         max_servos = 16,
         i2c_address = 0x40;
@@ -14,7 +15,7 @@ class ServoController : private I2cDevice {
     public:
     ServoController(int i2c_adapter);
 
-    bool Begin(uint8_t prescale);
+    bool Open(uint8_t prescale);
     void Reset();
     void Sleep();
     void WakeUp();

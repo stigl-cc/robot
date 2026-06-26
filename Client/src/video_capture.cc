@@ -1,3 +1,4 @@
+#include "logger.hh"
 #include <cstring>
 #include <video_capture.hh>
 
@@ -24,13 +25,13 @@ VideoCapture::~VideoCapture() {
 
 bool VideoCapture::Open() {
     if(fd > 0) {
-        std::cerr << "W: Video Capture already opened" << std::endl;
+        log_tag("W", "already opened");
         return false;
     }
 
     std::string device_file = std::format("/dev/video{}", index);
     if((fd = v4l2_open(device_file.c_str(), O_RDWR)) < 0) {
-        std::cerr << "W: Could not open video file!" << strerror(errno) << std::endl;
+        log_tag_no("E", "open /dev/videoX file");
         return false;
     }
 
@@ -47,7 +48,7 @@ bool VideoCapture::Open() {
     };
 
     if(v4l2_ioctl(fd, VIDIOC_S_FMT, &fmt) < 0) {
-        std::cerr << "E: Could not set video pixel format " << strerror(errno) << std::endl;
+        log_tag_no("E", "set pixel format");
         Close();
         return false;
     }
@@ -60,7 +61,7 @@ bool VideoCapture::Open() {
     };
 
     if(v4l2_ioctl(fd, VIDIOC_REQBUFS, &req) < 0) {
-        std::cerr << "E: Could not request video buffer(s)" << strerror(errno) << std::endl;
+        log_tag_no("E", "request video buffer(s)");
         Close();
         return false;
     }
@@ -72,7 +73,7 @@ bool VideoCapture::Open() {
         .memory = V4L2_MEMORY_MMAP
     };
     if(v4l2_ioctl(fd, VIDIOC_QUERYBUF, &buf) < 0) {
-        std::cerr << "E: Could not query video buffer(s)" << strerror(errno) << std::endl;
+        log_tag_no("E", "query video buffer(s)");
         Close();
         return false;
     }
@@ -80,12 +81,12 @@ bool VideoCapture::Open() {
     void* buffer = v4l2_mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, buf.m.offset);
 
     if(buffer == MAP_FAILED) {
-        std::cerr << "E: Could not mmap video buffer(s)" << strerror(errno) << std::endl;
+        log_tag_no("E", "mmap video buffer(s)");
         return false;
     }
 
     if(v4l2_ioctl(fd, VIDIOC_STREAMON, &v4l2_stream_type) < 0) {
-        std::cerr << "Streaming could not be enabled" << std::endl;
+        log_tag("E", "enable streaming");
         Close();
         return false;
     }
@@ -101,7 +102,7 @@ void VideoCapture::CaptureFrame() {
         .memory = V4L2_MEMORY_MMAP,
     };
     if(v4l2_ioctl(fd, VIDIOC_QBUF, &buf) < 0) {
-        std::cerr << "Buffer could not be enqueued" << std::endl;
+        log_tag("E", "enqueue buffer");
         Close();
     }
 
@@ -115,7 +116,7 @@ void VideoCapture::CaptureFrame() {
     } while(ret == -1 && (errno != EINTR));
 
     if(ret == -1) {
-        std::cerr << "E: Camera could not be select'd!" << std::endl;
+        log_tag("E", "select'd the camera");
     }
 
     // Dequeue the v4l2 buffer
@@ -124,7 +125,7 @@ void VideoCapture::CaptureFrame() {
         .memory = V4L2_MEMORY_MMAP,
     };
     if(v4l2_ioctl(fd, VIDIOC_DQBUF, &buf) < 0) {
-        std::cerr << "Buffer could not be dequeued" << std::endl;
+        log_tag("E", "dequeue buffer");
         Close();
     }
 }

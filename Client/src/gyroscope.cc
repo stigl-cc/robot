@@ -24,8 +24,8 @@
 
 Gyroscope::Gyroscope(int i2c_adapter) : I2cDevice(i2c_adapter, i2c_address) {}
 
-bool Gyroscope::Begin() {
-    if(!(static_cast<I2cDevice*>(this))->Open())
+bool Gyroscope::Open() {
+    if(!static_cast<I2cDevice*>(this)->Open())
         return false;
 
     WriteReg(MPU6050_PWR_MGMT_1_REGISTER, 0x01); // power on

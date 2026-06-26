@@ -40,7 +40,9 @@ int main() {
     }
 
     */
-    VideoCapture video(0);
+
+    /*
+      VideoCapture video(0);
 
     const void* video_buffer = nullptr;
     int video_buffer_len;
@@ -49,4 +51,5 @@ int main() {
     video.CaptureFrame();
 
     std::cerr << video.Open() << "\n";
+    */
 }

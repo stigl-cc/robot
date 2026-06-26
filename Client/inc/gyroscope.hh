@@ -8,6 +8,7 @@
 // MPU6050
 class Gyroscope : private I2cDevice {
     protected:
+    const char* log_tag = "Gyroscope: ";
     static constexpr uint8_t
         i2c_address = 0x68;
 
@@ -24,7 +25,7 @@ class Gyroscope : private I2cDevice {
 
     Gyroscope(int i2c_adapter);
 
-    bool Begin();
+    bool Open();
     void Calibrate();
 
     void CalculateAngles(double deltaTime);

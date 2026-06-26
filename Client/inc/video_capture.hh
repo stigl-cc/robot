@@ -5,6 +5,7 @@
 
 class VideoCapture {
     protected:
+    const char* log_tag = "VideoCapture: ";
     int fd;
     int index;
 

@@ -48,10 +48,10 @@
 ServoController::ServoController(int i2c_adapter) : I2cDevice(i2c_adapter, i2c_address) {
 }
 
-bool ServoController::Begin(uint8_t prescale) {
-    if(!((I2cDevice*)this)->Open()) {
+bool ServoController::Open(uint8_t prescale) {
+    if(!static_cast<I2cDevice*>(this)->Open())
         return false;
-    }
+
     this->Reset();
     this->SetOscillatorFrequency(FREQUENCY_OSCILLATOR);
 
