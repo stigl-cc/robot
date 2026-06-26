@@ -13,8 +13,9 @@
 Note: If you need compile_commands.json for development, they will be generated at this point  
 
 ## Compile
-`cmake --build build`  
+`cmake --build build --target Client`  
 Your executable should now be visible in `build/client/`  
+You can also remove the `--target Client`, and both parts of the project will be built.  
 
 ## Build v4l-utils for aarch64-linux cross
 ### 1) Clone v4l2-utils
