@@ -2,17 +2,17 @@
 
 #include <cmath>
 
-float Vector3::Magnitude() {
+float Vector3::magnitude() {
     return std::sqrtf(X * X + Y * Y + Z * Z);
 }
 
-Vector3 Vector3::Normalized() {
-    float magnitude = this->Magnitude();
-    if(magnitude == 0.00) return Vector3 { 0, 0, 0 };
-    return *this / magnitude;
+Vector3 Vector3::normalized() {
+    float mag = magnitude();
+    if(mag == 0.00) return Vector3 { 0, 0, 0 };
+    return *this / mag;
 }
 
-Vector3 Vector3::Forward() {
+Vector3 Vector3::forward() {
     return {
         (+std::cosf(X) * std::sinf(Y)),
         (-std::sinf(X)),
@@ -20,7 +20,7 @@ Vector3 Vector3::Forward() {
     };
 }
 
-Vector3 Vector3::Right() {
+Vector3 Vector3::right() {
     return {
         cosf(Y),
         0.0f,
@@ -28,7 +28,7 @@ Vector3 Vector3::Right() {
     };
 }
 
-Vector3 Vector3::Up() {
+Vector3 Vector3::up() {
     return{
         (sinf(X) * sinf(Y)),
         (cosf(X)),
@@ -52,14 +52,14 @@ Vector3& operator/=(Vector3& a, const Vector3& b) { a = a / b; return a; }
 Vector3& operator*=(Vector3& a, float b) { a = a * b; return a; }
 Vector3& operator/=(Vector3& a, float b) { a = a / b; return a; } 
 
-Vector2 Vector2::Right() {
+Vector2 Vector2::right() {
     return {
         cosf(Y),
         sinf(Y),
     };
 }
 
-Vector2 Vector2::Up() {
+Vector2 Vector2::up() {
     return{
         sinf(Y),
         cosf(Y),

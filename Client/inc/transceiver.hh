@@ -5,30 +5,53 @@
 #include <sys/poll.h>
 
 class Transceiver {
-    protected:
-    const char* log_tag = "Transceiver: ";
+    public:
+    enum class Status {
+        Connecting,
+        Connected,
+        Failed,
+        Closed,
+    };
+
+    private:
+    const char *LOG_TAG = "Transceiver";
 
     static constexpr uint16_t
-        bind_port = 1231,
-        timeout_s = 10,
-        max_reconnects = 5;
+        BIND_PORT = 1231,
+        TIMEOUT_S = 10,
+        MAX_RECONNECTS = 5;
+
     static constexpr uint32_t
-        recv_buffer_len = 8192;
+        RECV_BUFFER_LEN = 8192;
 
-    int fd;
-    uint8_t buffer[recv_buffer_len];
+    int fd_;
+    uint8_t recvBuffer_[RECV_BUFFER_LEN];
 
-    void UpdateEvents();
+    enum Status status_;
+    sockaddr_in serverAddress_;
+    int reconnectCounter_ = 0;
 
-    short handlePoll(pollfd fds);
-    bool isWritable();
-    void onDataAvilable();
+    bool connect();
+    bool reconnect();
 
     public:
-    Transceiver();
-    ~Transceiver();
+    Transceiver(sockaddr_in server);
 
-    bool Connect(sockaddr_in);
-    bool Open(sockaddr_in server);
-    void Close();
+    bool open();
+
+    Status getStatus();
+    void update(bool checkWritable);
+
+    void close();
+
+    ~Transceiver();
 };
+
+/*
+State               POLLIN POLLOUT POLLHUP / POLLERR   Secondary Check
+Connection Success  Don't  Yes     No             getsockopt() returns 0
+Connection Failed   Don't  Don't   Yes            getsockopt() returns error
+Incoming Data       Yes    Don't   No             recv() returns > 0
+Clean Disconnect    Yes    Don't   Don't          recv() returns 0
+Broken Connection   Don't  Don't   Yes            recv() returns -1 (ECONNRESET)
+*/

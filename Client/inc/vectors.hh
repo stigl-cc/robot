@@ -3,10 +3,10 @@
 struct Vector3 {
     float X, Y, Z;
 
-    float Magnitude();
-    Vector3 Normalized();
+    float magnitude();
+    Vector3 normalized();
 
-    Vector3 Up(), Right(), Forward();
+    Vector3 up(), right(), forward();
 };
 
 extern Vector3 operator+(const Vector3&, const Vector3&);
@@ -29,10 +29,10 @@ extern Vector3& operator/=(Vector3&, float);
 struct Vector2 {
     float X, Y;
 
-    float Magnitude();
-    Vector2 Normalized();
+    float magnitude();
+    Vector2 normalized();
 
-    Vector2 Up(), Right();
+    Vector2 up(), right();
 };
 
 extern Vector2 operator+(Vector2, Vector2);

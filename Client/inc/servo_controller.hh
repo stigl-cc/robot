@@ -5,32 +5,32 @@
 // PCA9685
 class ServoController : private I2cDevice {
     protected:
-    const char* log_tag = "ServoController: ";
+    const char* LOG_TAG = "ServoController: ";
     static constexpr uint8_t
-        max_servos = 16,
-        i2c_address = 0x40;
+        MAX_SERVOS = 16,
+        I2C_ADDRESS = 0x40;
 
-    uint32_t oscillator_freq;
+    uint32_t oscillator_freq_;
 
     public:
-    ServoController(int i2c_adapter);
+    ServoController(int i2cAdapter);
 
-    bool Open(uint8_t prescale);
-    void Reset();
-    void Sleep();
-    void WakeUp();
+    bool open(uint8_t prescale);
+    void reset();
+    void sleep();
+    void wakeUp();
 
-    void SetExtClock(uint8_t prescale);
-    void SetPWMFreq(float freq);
-    void SetOutputMode(bool totempole);
+    void setExtClock(uint8_t prescale);
+    void setPWMFreq(float freq);
+    void setOutputMode(bool totempole);
 
-    uint16_t GetPWM(uint8_t channel, bool off);
-    void SetPWM(uint8_t channel, uint16_t on, uint16_t off);
-    void SetPin(uint8_t channel, uint16_t val, bool invert);
+    uint16_t getPWM(uint8_t channel, bool off);
+    void setPWM(uint8_t channel, uint16_t on, uint16_t off);
+    void setPin(uint8_t channel, uint16_t val, bool invert);
 
-    uint8_t ReadPrescale();
+    uint8_t readPrescale();
 
-    void SetOscillatorFrequency(uint32_t freq);
-    uint32_t GetOscillatorFrequency();
-    void Write_us(uint8_t channel, uint16_t uS);
+    void setOscillatorFrequency(uint32_t freq);
+    uint32_t getOscillatorFrequency();
+    void write_us(uint8_t channel, uint16_t uS);
 };

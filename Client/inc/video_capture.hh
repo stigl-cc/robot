@@ -5,27 +5,33 @@
 
 class VideoCapture {
     protected:
-    const char* log_tag = "VideoCapture: ";
-    int fd;
-    int index;
+    const char* LOG_TAG = "VideoCapture: ";
+    const enum v4l2_buf_type
+        V4L2_STREAM_TYPE = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-    void* video_buffer;
-    size_t video_buffer_len;
-    
+    int fd_;
+    int index_;
+
+    void* video_buffer_;
+    size_t video_buffer_len_;
 
     fd_set fds = { };
     timeval tv = { .tv_sec = 2 };
 
-    const enum v4l2_buf_type v4l2_stream_type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
     public:
     VideoCapture(int index);
+
+    VideoCapture(const VideoCapture&) = delete;
+    VideoCapture& operator=(const VideoCapture&) = delete;
+
+    VideoCapture(VideoCapture&&);
+    VideoCapture& operator=(VideoCapture&&);
+
+    bool open();
+
+    int getVideoBuffer(const void** buffer_ptr);
+    void captureFrame();
+
+    void close();
     ~VideoCapture();
-
-    bool Open();
-    void CaptureFrame();
-    void Close();
-
-    int GetVideoBuffer(const void** buffer_ptr);
 };
-

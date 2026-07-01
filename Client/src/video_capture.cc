@@ -1,36 +1,49 @@
-#include "logger.hh"
-#include <cstring>
 #include <video_capture.hh>
+#include <logger.hh>
 
+#include <utility>
 #include <fcntl.h>
 #include <string>
 #include <format>
 #include <sys/ioctl.h>
 #include <linux/videodev2.h>
 #include <unistd.h>
-#include <iostream>
 #include <sys/mman.h>
-
 #include <libv4l2.h>
 
 VideoCapture::VideoCapture(int index) :
-    fd(0),
-    index(index),
-    video_buffer(nullptr),
-    video_buffer_len(0) { }
+    fd_(-1),
+    index_(index),
+    video_buffer_(nullptr),
+    video_buffer_len_(0) { }
 
-VideoCapture::~VideoCapture() {
-    Close();
+VideoCapture::VideoCapture(VideoCapture&& other) : fd_(-1) {
+    fd_ = std::exchange(other.fd_, -1);
+    index_ = std::exchange(other.index_, 0);
+    video_buffer_ = std::exchange(other.video_buffer_, nullptr);
+    video_buffer_len_ = std::exchange(other.video_buffer_len_, 0);
 }
 
-bool VideoCapture::Open() {
-    if(fd > 0) {
+VideoCapture& VideoCapture::operator=(VideoCapture&& other) {
+    if(this == &other)
+        return *this;
+
+    if(fd_ >= 0) close();
+    fd_ = std::exchange(other.fd_, -1);
+    index_ = std::exchange(other.index_, 0);
+    video_buffer_ = std::exchange(other.video_buffer_, nullptr);
+    video_buffer_len_ = std::exchange(other.video_buffer_len_, 0);
+    return *this;
+}
+
+bool VideoCapture::open() {
+    if(fd_ >= 0) {
         log_tag("W", "already opened");
         return false;
     }
 
-    std::string device_file = std::format("/dev/video{}", index);
-    if((fd = v4l2_open(device_file.c_str(), O_RDWR)) < 0) {
+    std::string device_file = std::format("/dev/video{}", index_);
+    if((fd_ = v4l2_open(device_file.c_str(), O_RDWR)) < 0) {
         log_tag_no("E", "open /dev/videoX file");
         return false;
     }
@@ -47,9 +60,9 @@ bool VideoCapture::Open() {
         }
     };
 
-    if(v4l2_ioctl(fd, VIDIOC_S_FMT, &fmt) < 0) {
+    if(v4l2_ioctl(fd_, VIDIOC_S_FMT, &fmt) < 0) {
         log_tag_no("E", "set pixel format");
-        Close();
+        close();
         return false;
     }
 
@@ -60,9 +73,9 @@ bool VideoCapture::Open() {
         .memory = V4L2_MEMORY_MMAP,
     };
 
-    if(v4l2_ioctl(fd, VIDIOC_REQBUFS, &req) < 0) {
+    if(v4l2_ioctl(fd_, VIDIOC_REQBUFS, &req) < 0) {
         log_tag_no("E", "request video buffer(s)");
-        Close();
+        close();
         return false;
     }
 
@@ -72,47 +85,53 @@ bool VideoCapture::Open() {
         .type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
         .memory = V4L2_MEMORY_MMAP
     };
-    if(v4l2_ioctl(fd, VIDIOC_QUERYBUF, &buf) < 0) {
+    if(v4l2_ioctl(fd_, VIDIOC_QUERYBUF, &buf) < 0) {
         log_tag_no("E", "query video buffer(s)");
-        Close();
+        close();
         return false;
     }
 
-    void* buffer = v4l2_mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, buf.m.offset);
+    void* buffer = v4l2_mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, buf.m.offset);
 
     if(buffer == MAP_FAILED) {
         log_tag_no("E", "mmap video buffer(s)");
         return false;
     }
 
-    if(v4l2_ioctl(fd, VIDIOC_STREAMON, &v4l2_stream_type) < 0) {
+    if(v4l2_ioctl(fd_, VIDIOC_STREAMON, &V4L2_STREAM_TYPE) < 0) {
         log_tag("E", "enable streaming");
-        Close();
+        close();
         return false;
     }
 
     return true;
 }
 
-void VideoCapture::CaptureFrame() {
+
+int VideoCapture::getVideoBuffer(const void** buffer_ptr) {
+    *buffer_ptr = static_cast<const void*>(video_buffer_);
+    return video_buffer_len_;
+}
+
+void VideoCapture::captureFrame() {
     // Enqueue the v4l2 buffer
     v4l2_buffer buf = {
         .index = 0,
         .type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
         .memory = V4L2_MEMORY_MMAP,
     };
-    if(v4l2_ioctl(fd, VIDIOC_QBUF, &buf) < 0) {
+    if(v4l2_ioctl(fd_, VIDIOC_QBUF, &buf) < 0) {
         log_tag("E", "enqueue buffer");
-        Close();
+        close();
     }
 
     // Wait until a frame is available
     int ret;
     do {
         FD_ZERO(&fds);
-        FD_SET(fd, &fds);
+        FD_SET(fd_, &fds);
 
-        ret = select(fd + 1, &fds, NULL, NULL, &tv);
+        ret = select(fd_ + 1, &fds, NULL, NULL, &tv);
     } while(ret == -1 && (errno != EINTR));
 
     if(ret == -1) {
@@ -124,29 +143,29 @@ void VideoCapture::CaptureFrame() {
         .type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
         .memory = V4L2_MEMORY_MMAP,
     };
-    if(v4l2_ioctl(fd, VIDIOC_DQBUF, &buf) < 0) {
+    if(v4l2_ioctl(fd_, VIDIOC_DQBUF, &buf) < 0) {
         log_tag("E", "dequeue buffer");
-        Close();
+        close();
     }
 }
 
-void VideoCapture::Close() {
-    if(!fd) return;
+void VideoCapture::close() {
+    if(fd_ < 0)
+        return;
 
-    v4l2_ioctl(fd, VIDIOC_STREAMOFF, &v4l2_stream_type);
-    v4l2_ioctl(fd, VIDIOC_REQBUFS, 0); // free all buffers - https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/vidioc-reqbufs.html
+    v4l2_ioctl(fd_, VIDIOC_STREAMOFF, &V4L2_STREAM_TYPE);
+    v4l2_ioctl(fd_, VIDIOC_REQBUFS, 0); // free all buffers - https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/vidioc-reqbufs.html
 
-    if(video_buffer) {
-        v4l2_munmap(video_buffer, video_buffer_len);
-        video_buffer_len = 0;
-        video_buffer = nullptr;
+    if(video_buffer_) {
+        v4l2_munmap(video_buffer_, video_buffer_len_);
+        video_buffer_len_ = 0;
+        video_buffer_ = nullptr;
     }
 
-    v4l2_close(fd);
-    fd = 0;
+    v4l2_close(fd_);
+    fd_ = -1;
 }
 
-int VideoCapture::GetVideoBuffer(const void** buffer_ptr) {
-    *buffer_ptr = static_cast<const void*>(video_buffer);
-    return video_buffer_len;
+VideoCapture::~VideoCapture() {
+    close();
 }
