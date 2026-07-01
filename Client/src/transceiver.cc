@@ -4,8 +4,6 @@
 #include <sys/poll.h>
 #include <cerrno>
 #include <sys/fcntl.h>
-#include <cstring>
-#include <iostream>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -13,117 +11,166 @@
 #include <unistd.h>
 #include <poll.h>
 
-Transceiver::Transceiver() : fd(0) { }
-Transceiver::~Transceiver() {
-    this->Close();
+bool Transceiver::connect() {
+    int ret = ::connect(fd_, reinterpret_cast<sockaddr*>(&serverAddress_), sizeof(serverAddress_));
+
+    if(ret >= 0 || errno == EINPROGRESS) {
+        status_ = Status::Connecting;
+        return true;
+    }
+
+    log_tag_no("E", "connect");
+    status_ = Status::Failed;
+    return false;
 }
 
-bool Transceiver::Open(sockaddr_in server) {
-    if((this->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+bool Transceiver::reconnect() {
+    if(reconnectCounter_++ < MAX_RECONNECTS) {
+        close();
+        return open();
+    }
+    return false;
+}
+
+Transceiver::Transceiver(sockaddr_in serverAddress)
+    : fd_(-1), serverAddress_(serverAddress) {}
+
+bool Transceiver::open() {
+    if((fd_ = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         log_tag_no("E", "open socket");
+        status_ = Status::Failed;
         return false;
     }
 
-    if(fcntl(this->fd, F_SETFL, O_NONBLOCK) < 0) {
+    if(fcntl(fd_, F_SETFL, O_NONBLOCK) < 0) {
         log_tag_no("E", "set O_NONBLOCK");
-        Close();
+        close();
+        status_ = Status::Failed;
         return false;
     }
 
-    timeval timeout = { .tv_sec = timeout_s, .tv_usec = 0 };
-    if(setsockopt(this->fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+    timeval timeout = { .tv_sec = TIMEOUT_S, .tv_usec = 0 };
+    if(setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
         log_tag_no("W", "set SO_RCVTIMEO");
     }
-    if(setsockopt(this->fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
+    if(setsockopt(fd_, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
         log_tag_no("W", "set SO_RCVTIMEO");
     }
 
     int reuse_addr = 0b1;
-    if(setsockopt(this->fd, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(reuse_addr)) < 0) {
+    if(setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(reuse_addr)) < 0) {
         log_tag_no("W", "set SO_REUSEADDR");
     }
 
     int keepalive = 0b1;
-    if(setsockopt(this->fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive))) {
+    if(setsockopt(fd_, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive))) {
         log_tag_no("W", "set SO_KEEPALIVE");
     }
 
     sockaddr_in bind_address = {
         .sin_family = AF_INET,
-        .sin_port = htons(bind_port),
+        .sin_port = htons(BIND_PORT),
         .sin_addr = INADDR_ANY,
     };
-    if(bind(fd, reinterpret_cast<sockaddr*>(&bind_address), sizeof(bind_address)) < 0) {
+    if(bind(fd_, reinterpret_cast<sockaddr*>(&bind_address), sizeof(bind_address)) < 0) {
         log_tag_no("W", "bind to address");
     }
 
-    return this->Connect(server);
+    return connect();
 }
 
-bool Transceiver::Connect(sockaddr_in server) {
-    int ret = connect(fd, reinterpret_cast<sockaddr*>(&server), sizeof(server));
-
-    if(ret >= 0 || errno == EAGAIN || errno == EWOULDBLOCK)
-        return true;
-
-    log_tag_no("E", "connect");
-    return false;
+Transceiver::Status Transceiver::getStatus() {
+    return status_;
 }
 
-void Transceiver::onDataAvilable() {
-    int ret = recv(this->fd, buffer, recv_buffer_len, 0);
-    if(ret >= 0 || errno == EAGAIN || errno == EWOULDBLOCK)
-        return;
-    log_tag_no("W", "recv");
-}
+/*
+  Check according to these:
 
-bool Transceiver::isWritable() {
+  State               POLLIN POLLOUT POLLHUP / POLLERR   Secondary Check
+  Connection Success  Don't  Yes     No             getsockopt() returns 0
+  Connection Failed   Don't  Don't   Yes            getsockopt() returns error
+  Incoming Data       Yes    Don't   No             recv() returns > 0
+  Clean Disconnect    Yes    Don't   Don't          recv() returns 0
+  Broken Connection   Don't  Don't   Yes            recv() returns -1 (ECONNRESET)
+*/
+
+void Transceiver::update(bool checkWritable) {
+    int ret;
     pollfd fds = {
-        .fd = this->fd,
-        .events = POLLIN | POLLERR | POLLHUP | POLLOUT,
+        .fd = fd_,
+        .events = POLLIN | ((status_ == Status::Connecting || checkWritable) ? POLLOUT : 0),
     };
 
-    return this->handlePoll(fds) & POLLOUT;
-}
+    ret = poll(&fds, 1, 10);
 
-short Transceiver::handlePoll(pollfd fds) {
-    int ret = poll(&fds, 1, 10);
-
-    if(ret == -1) {
+    if(ret == -1)
         log_tag_no("E", "poll");
-        return -1;
-    } else if(ret == 0) {
-        return -1; // nothing
-    } else {
-        if(fds.revents & POLLERR || fds.revents & POLLHUP) {
-            int error;
-            socklen_t error_len;
-            getsockopt(this->fd, SOL_SOCKET, SO_ERROR, &error, &error_len);
+
+    if(ret <= 0)
+        return;
+
+    if(fds.revents & POLLIN) {
+        ret = recv(fd_, recvBuffer_, RECV_BUFFER_LEN, 0);
+
+        if(ret == -1) {
+            if(errno == EAGAIN || errno == EWOULDBLOCK)
+                return;
+            // broken connection
+            status_ = Status::Failed;
+            log_tag_no("E", "recv");
+            return;
+        } else if(ret == 0) {
+            // normal socket closure
+            status_ = Status::Closed;
+            return;
         }
 
-        if(fds.revents & POLLIN)
-            onDataAvilable();
-        return fds.revents;
+        // actual data received
+    }
+
+    if(fds.revents & POLLOUT) {
+        if(status_ == Status::Connecting) {
+            int error;
+            socklen_t error_len = sizeof(error);
+
+            if(getsockopt(fd_, SOL_SOCKET, SO_ERROR, &error, &error_len) == 0) {
+                if(error == 0) { // successful connection
+                    status_ = Status::Connected;
+                    return;
+                } else { // connection failed
+                    log_tag_no("E", "connection");
+                    status_ = Status::Failed;
+                    return;
+                }
+            } else {
+                log_tag_no("E", "getsockopt");
+                return;
+            }
+        }
+    }
+
+    if(fds.revents & POLLERR || fds.revents & POLLHUP) {
+        status_ = Status::Failed;
+        int error;
+        socklen_t error_len = sizeof(error);
+        if(getsockopt(fd_, SOL_SOCKET, SO_ERROR, &error, &error_len) == 0) {
+            if(error == 0)
+                return;
+            log_tag_no("E", "POLLERR");
+            return;
+        } else {
+            log_tag_no("E", "getsockopt");
+            return;
+        }
     }
 }
 
-void Transceiver::UpdateEvents() {
-    pollfd fds = {
-        .fd = this->fd,
-        .events = POLLIN | POLLHUP | POLLERR,
-    };
-
-    int ret = poll(&fds, 1, 10);
-    if(ret == -1) {
-        log_tag_no("E", "poll socket events");
-    } else if(ret == 0) {
-
-    } else {
-        if(fds.revents & POLLIN)
-            onDataAvilable();
-    }
+void Transceiver::close() {
+    status_ = Status::Closed;
+    ::shutdown(fd_, SHUT_RDWR);
+    ::close(fd_);
 }
 
-void Transceiver::Close() {
-    close(fd);
+Transceiver::~Transceiver() {
+    close();
 }

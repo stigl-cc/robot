@@ -46,12 +46,3 @@ class Transceiver {
 
     ~Transceiver();
 };
-
-/*
-State               POLLIN POLLOUT POLLHUP / POLLERR   Secondary Check
-Connection Success  Don't  Yes     No             getsockopt() returns 0
-Connection Failed   Don't  Don't   Yes            getsockopt() returns error
-Incoming Data       Yes    Don't   No             recv() returns > 0
-Clean Disconnect    Yes    Don't   Don't          recv() returns 0
-Broken Connection   Don't  Don't   Yes            recv() returns -1 (ECONNRESET)
-*/

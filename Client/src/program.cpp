@@ -1,9 +1,13 @@
+#include "transceiver.hh"
 #include "video_capture.hh"
 #include <iostream>
+
 #include <servo_controller.hh>
 #include <gyroscope.hh>
+#include <string>
 #include <unistd.h>
 #include <linux/videodev2.h>
+#include <arpa/inet.h>
 
 int main() {
     /*    uint8_t servo_min = 0, servo_max = 5;
@@ -52,4 +56,31 @@ int main() {
 
     std::cerr << video.Open() << "\n";
     */
+
+    sockaddr_in server;
+    server.sin_family = AF_INET;
+    inet_pton(AF_INET, "127.0.0.1", &server.sin_addr);
+    server.sin_port = htons(3214);
+
+
+    Transceiver transceiver(server);
+    transceiver.open();
+    while(1) {
+        Transceiver::Status status = transceiver.getStatus();
+        if(status == Transceiver::Status::Connecting) {
+            std::cout << "Connecting\n";
+        } else if(status == Transceiver::Status::Connected) {
+            std::cout << "Connected\n";
+        } else if(status == Transceiver::Status::Closed) {
+            std::cout << "Closed\n";
+            break;
+        } else if(status == Transceiver::Status::Failed) {
+            std::cout << "Failed\n";
+            break;
+        }
+
+        transceiver.update(false);
+        usleep(100'000);
+    }
+    transceiver.close();
 }
