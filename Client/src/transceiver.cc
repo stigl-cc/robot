@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <transceiver.hh>
 #include <logger.hh>
 
@@ -10,6 +11,7 @@
 #include <asm-generic/socket.h>
 #include <unistd.h>
 #include <poll.h>
+#include <utility>
 
 bool Transceiver::connect() {
     int ret = ::connect(fd_, reinterpret_cast<sockaddr*>(&serverAddress_), sizeof(serverAddress_));
@@ -35,6 +37,36 @@ bool Transceiver::reconnect() {
 
 Transceiver::Transceiver(sockaddr_in serverAddress)
     : fd_(-1), serverAddress_(serverAddress) {}
+
+Transceiver::Transceiver(Transceiver&& other) {
+    fd_ = std::exchange(other.fd_, -1);
+    memcpy(recvBuffer_, other.recvBuffer_, RECV_BUFFER_LEN);
+    recvPacketBuffer_ = std::exchange(other.recvPacketBuffer_, nullptr);
+    recvPacketLength_ = std::exchange(other.recvPacketLength_, 0);
+    recvPacketPosition_ = std::exchange(other.recvPacketPosition_, 0);
+    status_ = std::exchange(other.status_, Status::Failed);
+    serverAddress_ = std::exchange(other.serverAddress_, {});
+    reconnectCounter_ = std::exchange(other.reconnectCounter_, 0);
+    isWritable_ = std::exchange(other.isWritable_, false);
+}
+
+Transceiver& Transceiver::operator=(Transceiver&& other) {
+    if(&other == this)
+        return *this;
+
+    if(fd_ >= 0) close();
+    fd_ = std::exchange(other.fd_, -1);
+    memcpy(recvBuffer_, other.recvBuffer_, RECV_BUFFER_LEN);
+    recvPacketBuffer_ = std::exchange(other.recvPacketBuffer_, nullptr);
+    recvPacketLength_ = std::exchange(other.recvPacketLength_, 0);
+    recvPacketPosition_ = std::exchange(other.recvPacketPosition_, 0);
+    status_ = std::exchange(other.status_, Status::Failed);
+    serverAddress_ = std::exchange(other.serverAddress_, {});
+    reconnectCounter_ = std::exchange(other.reconnectCounter_, 0);
+    isWritable_ = std::exchange(other.isWritable_, false);
+
+    return *this;
+}
 
 bool Transceiver::open() {
     if((fd_ = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -80,11 +112,11 @@ bool Transceiver::open() {
     return connect();
 }
 
-Transceiver::Status Transceiver::getStatus() {
+Transceiver::Status Transceiver::getStatus() const {
     return status_;
 }
 
-bool Transceiver::isWritable() {
+bool Transceiver::isWritable() const {
     return isWritable_;
 }
 
@@ -136,6 +168,46 @@ void Transceiver::update(bool checkWritable) {
         }
 
         // actual data received here
+
+        /*
+          ret .. length for recv
+          recvBuffer_ .. buffer for recv
+          recvPacketBuffer_ .. buffer for packet
+          recvPacketLength_ .. length for packet
+          recvPacketPosition_ .. how filled is the packet already
+        */
+
+        int recvBufferIndex = 0;
+
+        do {
+            // read recvPacketPosition_
+            while (recvPacketPosition_ < 4 && recvBufferIndex < ret) {
+                recvPacketLength_ |= recvBuffer_[recvBufferIndex] << (3 - recvPacketPosition_) * 8;
+                recvPacketPosition_++;
+                recvBufferIndex++;
+            }
+
+            if (recvPacketPosition_ >= 4 && recvPacketBuffer_ == nullptr) {
+                recvPacketBuffer_ = new uint8_t[recvPacketLength_];
+            }
+
+            size_t copyLength = std::min<size_t>(recvPacketLength_ - recvPacketPosition_, ret - recvBufferIndex);
+
+            memcpy(recvPacketBuffer_ + recvPacketPosition_, recvBuffer_ + recvBufferIndex, copyLength);
+
+            recvBufferIndex += copyLength;
+            recvPacketPosition_ += copyLength;
+
+            if (recvPacketPosition_ >= recvPacketLength_ - 1) {
+                // do something with our packet here
+
+                // delete packet
+                delete recvPacketBuffer_;
+                recvPacketLength_ = 0;
+                recvPacketPosition_ = 0;
+                recvPacketBuffer_ = nullptr;
+            }
+        } while (recvBufferIndex < ret);
     }
 
     if(fds.revents & POLLOUT) {

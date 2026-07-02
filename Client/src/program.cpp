@@ -2,6 +2,7 @@
 #include "video_capture.hh"
 #include <iostream>
 
+#include <netinet/in.h>
 #include <servo_controller.hh>
 #include <gyroscope.hh>
 #include <string>
@@ -61,7 +62,6 @@ int main() {
     server.sin_family = AF_INET;
     inet_pton(AF_INET, "127.0.0.1", &server.sin_addr);
     server.sin_port = htons(3214);
-
 
     Transceiver transceiver(server);
     transceiver.open();

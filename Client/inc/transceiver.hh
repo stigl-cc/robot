@@ -27,6 +27,11 @@ class Transceiver {
     int fd_;
     uint8_t recvBuffer_[RECV_BUFFER_LEN];
 
+    uint8_t* recvPacketBuffer_ = nullptr;
+    size_t
+        recvPacketLength_ = 0,
+        recvPacketPosition_ = 0;
+
     enum Status status_;
     struct sockaddr_in serverAddress_;
     int reconnectCounter_ = 0;
@@ -37,11 +42,16 @@ class Transceiver {
 
     public:
     Transceiver(sockaddr_in server);
+    Transceiver(const Transceiver&) = delete;
+    Transceiver& operator=(const Transceiver&) = delete;
+
+    Transceiver(Transceiver&&);
+    Transceiver& operator=(Transceiver&&);
 
     bool open();
 
-    Status getStatus();
-    bool isWritable();
+    Status getStatus() const;
+    bool isWritable() const;
     void update(bool checkWritable);
 
     void close();
