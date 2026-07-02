@@ -113,11 +113,15 @@ void Transceiver::update(bool checkWritable) {
         ret = recv(fd_, recvBuffer_, RECV_BUFFER_LEN, 0);
 
         if(ret == -1) {
-            if(errno == EAGAIN || errno == EWOULDBLOCK)
+            if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                 return;
+
             // broken connection
             status_ = Status::Failed;
             log_tag_no("E", "recv");
+
+            if(errno == ETIMEDOUT || errno == ECONNRESET)
+                reconnect();
             return;
         } else if(ret == 0) {
             // normal socket closure

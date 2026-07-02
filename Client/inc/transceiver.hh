@@ -28,7 +28,7 @@ class Transceiver {
     uint8_t recvBuffer_[RECV_BUFFER_LEN];
 
     enum Status status_;
-    sockaddr_in serverAddress_;
+    struct sockaddr_in serverAddress_;
     int reconnectCounter_ = 0;
 
     bool connect();
