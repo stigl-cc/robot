@@ -10,7 +10,7 @@ enum LogLevels {
     LOG_ERR,
 };
 
-const std::string_view LOGLEVEL_STRS[] = {
+constexpr const std::string_view LOGLEVEL_STRS[] = {
     "Info",
     "Warning",
     "Error",
