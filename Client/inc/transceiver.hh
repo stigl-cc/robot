@@ -30,6 +30,7 @@ class Transceiver {
     enum Status status_;
     struct sockaddr_in serverAddress_;
     int reconnectCounter_ = 0;
+    bool isWritable_;
 
     bool connect();
     bool reconnect();
@@ -40,6 +41,7 @@ class Transceiver {
     bool open();
 
     Status getStatus();
+    bool isWritable();
     void update(bool checkWritable);
 
     void close();

@@ -38,13 +38,13 @@ VideoCapture& VideoCapture::operator=(VideoCapture&& other) {
 
 bool VideoCapture::open() {
     if(fd_ >= 0) {
-        log_tag("W", "already opened");
+        log_tag(LOG_WARN, "already opened");
         return false;
     }
 
     std::string device_file = std::format("/dev/video{}", index_);
     if((fd_ = v4l2_open(device_file.c_str(), O_RDWR)) < 0) {
-        log_tag_no("E", "open /dev/videoX file");
+        log_tag_no(LOG_ERR, "open /dev/videoX file");
         return false;
     }
 
@@ -61,7 +61,7 @@ bool VideoCapture::open() {
     };
 
     if(v4l2_ioctl(fd_, VIDIOC_S_FMT, &fmt) < 0) {
-        log_tag_no("E", "set pixel format");
+        log_tag_no(LOG_ERR, "set pixel format");
         close();
         return false;
     }
@@ -74,7 +74,7 @@ bool VideoCapture::open() {
     };
 
     if(v4l2_ioctl(fd_, VIDIOC_REQBUFS, &req) < 0) {
-        log_tag_no("E", "request video buffer(s)");
+        log_tag_no(LOG_ERR, "request video buffer(s)");
         close();
         return false;
     }
@@ -86,7 +86,7 @@ bool VideoCapture::open() {
         .memory = V4L2_MEMORY_MMAP
     };
     if(v4l2_ioctl(fd_, VIDIOC_QUERYBUF, &buf) < 0) {
-        log_tag_no("E", "query video buffer(s)");
+        log_tag_no(LOG_ERR, "query video buffer(s)");
         close();
         return false;
     }
@@ -94,12 +94,12 @@ bool VideoCapture::open() {
     void* buffer = v4l2_mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, buf.m.offset);
 
     if(buffer == MAP_FAILED) {
-        log_tag_no("E", "mmap video buffer(s)");
+        log_tag_no(LOG_ERR, "mmap video buffer(s)");
         return false;
     }
 
     if(v4l2_ioctl(fd_, VIDIOC_STREAMON, &V4L2_STREAM_TYPE) < 0) {
-        log_tag("E", "enable streaming");
+        log_tag(LOG_ERR, "enable streaming");
         close();
         return false;
     }
@@ -121,7 +121,7 @@ void VideoCapture::captureFrame() {
         .memory = V4L2_MEMORY_MMAP,
     };
     if(v4l2_ioctl(fd_, VIDIOC_QBUF, &buf) < 0) {
-        log_tag("E", "enqueue buffer");
+        log_tag(LOG_ERR, "enqueue buffer");
         close();
     }
 
@@ -135,7 +135,7 @@ void VideoCapture::captureFrame() {
     } while(ret == -1 && (errno != EINTR));
 
     if(ret == -1) {
-        log_tag("E", "select'd the camera");
+        log_tag(LOG_ERR, "select'd the camera");
     }
 
     // Dequeue the v4l2 buffer
@@ -144,7 +144,7 @@ void VideoCapture::captureFrame() {
         .memory = V4L2_MEMORY_MMAP,
     };
     if(v4l2_ioctl(fd_, VIDIOC_DQBUF, &buf) < 0) {
-        log_tag("E", "dequeue buffer");
+        log_tag(LOG_ERR, "dequeue buffer");
         close();
     }
 }
