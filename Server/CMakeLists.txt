@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_SOURCE_FILE_EXTENSIONS cpp;cc)
 
+# Compile shared separately since we are cross compiling
 add_subdirectory(${CMAKE_SOURCE_DIR}/../Shared ${CMAKE_BINARY_DIR}/shared)
 
 aux_source_directory(src SERVER_SOURCES)

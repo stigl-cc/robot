@@ -133,9 +133,11 @@ bool TcpClient::isWritable() const {
 
 void TcpClient::update(bool checkWritable) {
     int ret;
+
+    short checkPollout = (status_ == Status::Connecting || checkWritable) ? POLLOUT : 0;
     pollfd fds = {
         .fd = fd_,
-        .events = POLLIN | ((status_ == Status::Connecting || checkWritable) ? POLLOUT : 0),
+        .events = static_cast<short>(POLLIN | checkPollout),
     };
 
     ret = poll(&fds, 1, 10);
