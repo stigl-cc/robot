@@ -258,4 +258,7 @@ void Transceiver::close() {
 
 Transceiver::~Transceiver() {
     close();
+
+    if(recvPacketBuffer_)
+        delete[] recvPacketBuffer_;
 }

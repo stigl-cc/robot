@@ -6,10 +6,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_SOURCE_FILE_EXTENSIONS cpp;cc)
 
+add_subdirectory(${CMAKE_SOURCE_DIR}/../Shared ${CMAKE_BINARY_DIR}/shared)
+
 aux_source_directory(src CLIENT_SOURCES)
 
 add_executable(client ${CLIENT_SOURCES})
 target_include_directories(client PRIVATE inc)
-target_compile_options(client PRIVATE -Wall -Wextra -Wpedantic -Wno-missing-designated-field-initializers -Wno-missing-field-initializers)
-target_link_options(client PRIVATE -static-libgcc -static-libstdc++ -static)
-target_link_libraries(client -lv4l2 -lv4lconvert)
+target_compile_options(client PRIVATE -Wall -Wextra -Wpedantic -Wno-missing-designated-field-initializers -Wno-missing-field-initializers -Wold-style-cast)
+target_link_libraries(client PRIVATE -lv4l2 -lv4lconvert shared)
