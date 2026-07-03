@@ -1,7 +1,7 @@
-#include <algorithm>
-#include <transceiver.hh>
+#include <tcp_client.hh>
 #include <logger.hh>
 
+#include <algorithm>
 #include <sys/poll.h>
 #include <cerrno>
 #include <sys/fcntl.h>
@@ -13,7 +13,7 @@
 #include <poll.h>
 #include <utility>
 
-bool Transceiver::connect() {
+bool TcpClient::connect() {
     int ret = ::connect(fd_, reinterpret_cast<sockaddr*>(&serverAddress_), sizeof(serverAddress_));
 
     if(ret >= 0 || errno == EINPROGRESS) {
@@ -26,7 +26,7 @@ bool Transceiver::connect() {
     return false;
 }
 
-bool Transceiver::reconnect() {
+bool TcpClient::reconnect() {
     if(reconnectCounter_++ < MAX_RECONNECTS) {
         log_tag(LOG_INFO, "Attempting to reconnect...");
         close();
@@ -35,10 +35,10 @@ bool Transceiver::reconnect() {
     return false;
 }
 
-Transceiver::Transceiver(sockaddr_in serverAddress)
+TcpClient::TcpClient(sockaddr_in serverAddress)
     : fd_(-1), serverAddress_(serverAddress) {}
 
-Transceiver::Transceiver(Transceiver&& other) {
+TcpClient::TcpClient(TcpClient&& other) {
     fd_ = std::exchange(other.fd_, -1);
     memcpy(recvBuffer_, other.recvBuffer_, RECV_BUFFER_LEN);
     recvPacketBuffer_ = std::exchange(other.recvPacketBuffer_, nullptr);
@@ -50,7 +50,7 @@ Transceiver::Transceiver(Transceiver&& other) {
     isWritable_ = std::exchange(other.isWritable_, false);
 }
 
-Transceiver& Transceiver::operator=(Transceiver&& other) {
+TcpClient& TcpClient::operator=(TcpClient&& other) {
     if(&other == this)
         return *this;
 
@@ -68,7 +68,7 @@ Transceiver& Transceiver::operator=(Transceiver&& other) {
     return *this;
 }
 
-bool Transceiver::open() {
+bool TcpClient::open() {
     if((fd_ = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         log_tag_no(LOG_ERR, "open socket");
         status_ = Status::Failed;
@@ -112,11 +112,11 @@ bool Transceiver::open() {
     return connect();
 }
 
-Transceiver::Status Transceiver::getStatus() const {
+TcpClient::Status TcpClient::getStatus() const {
     return status_;
 }
 
-bool Transceiver::isWritable() const {
+bool TcpClient::isWritable() const {
     return isWritable_;
 }
 
@@ -131,7 +131,7 @@ bool Transceiver::isWritable() const {
   Broken Connection   Don't  Don't   Yes            recv() returns -1 (ECONNRESET)
 */
 
-void Transceiver::update(bool checkWritable) {
+void TcpClient::update(bool checkWritable) {
     int ret;
     pollfd fds = {
         .fd = fd_,
@@ -250,13 +250,13 @@ void Transceiver::update(bool checkWritable) {
     }
 }
 
-void Transceiver::close() {
+void TcpClient::close() {
     status_ = Status::Closed;
     ::shutdown(fd_, SHUT_RDWR);
     ::close(fd_);
 }
 
-Transceiver::~Transceiver() {
+TcpClient::~TcpClient() {
     close();
 
     if(recvPacketBuffer_)

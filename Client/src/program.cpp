@@ -1,11 +1,10 @@
-#include "transceiver.hh"
-#include "video_capture.hh"
-#include <iostream>
+#include <tcp_client.hh>
+#include <video_capture.hh>
 
+#include <iostream>
 #include <netinet/in.h>
 #include <servo_controller.hh>
 #include <gyroscope.hh>
-#include <string>
 #include <unistd.h>
 #include <linux/videodev2.h>
 #include <arpa/inet.h>
@@ -63,18 +62,18 @@ int main() {
     inet_pton(AF_INET, "127.0.0.1", &server.sin_addr);
     server.sin_port = htons(3214);
 
-    Transceiver transceiver(server);
+    TcpClient transceiver(server);
     transceiver.open();
     while(1) {
-        Transceiver::Status status = transceiver.getStatus();
-        if(status == Transceiver::Status::Connecting) {
+        TcpClient::Status status = transceiver.getStatus();
+        if(status == TcpClient::Status::Connecting) {
             std::cout << "Connecting\n";
-        } else if(status == Transceiver::Status::Connected) {
+        } else if(status == TcpClient::Status::Connected) {
             std::cout << "Connected\n";
-        } else if(status == Transceiver::Status::Closed) {
+        } else if(status == TcpClient::Status::Closed) {
             std::cout << "Closed\n";
             break;
-        } else if(status == Transceiver::Status::Failed) {
+        } else if(status == TcpClient::Status::Failed) {
             std::cout << "Failed\n";
             break;
         }

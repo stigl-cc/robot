@@ -4,7 +4,7 @@
 #include <netinet/in.h>
 #include <sys/poll.h>
 
-class Transceiver {
+class TcpClient {
     public:
     enum class Status {
         Connecting,
@@ -14,7 +14,7 @@ class Transceiver {
     };
 
     private:
-    const char *LOG_TAG = "Transceiver";
+    const char *LOG_TAG = "TcpClient";
 
     static constexpr uint16_t
         BIND_PORT = 1231,
@@ -41,12 +41,12 @@ class Transceiver {
     bool reconnect();
 
     public:
-    Transceiver(sockaddr_in server);
-    Transceiver(const Transceiver&) = delete;
-    Transceiver& operator=(const Transceiver&) = delete;
+    TcpClient(sockaddr_in server);
+    TcpClient(const TcpClient&) = delete;
+    TcpClient& operator=(const TcpClient&) = delete;
 
-    Transceiver(Transceiver&&);
-    Transceiver& operator=(Transceiver&&);
+    TcpClient(TcpClient&&);
+    TcpClient& operator=(TcpClient&&);
 
     bool open();
 
@@ -56,5 +56,5 @@ class Transceiver {
 
     void close();
 
-    ~Transceiver();
+    ~TcpClient();
 };
