@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <netinet/in.h>
+#include <string_view>
 #include <sys/poll.h>
 
 class TcpClient {
@@ -14,11 +15,11 @@ class TcpClient {
     };
 
     private:
-    const char *LOG_TAG = "TcpClient";
+    static constexpr std::string_view LOG_TAG = "TcpClient";
 
     static constexpr uint16_t
         BIND_PORT = 1231,
-        TIMEOUT_S = 10,
+        TIMEOUT_SEC = 10,
         MAX_RECONNECTS = 5;
 
     static constexpr uint32_t
@@ -39,6 +40,8 @@ class TcpClient {
 
     bool connect();
     bool reconnect();
+
+    bool setTimeout(int fd, uint32_t msTimeout);
 
     public:
     TcpClient(sockaddr_in server);

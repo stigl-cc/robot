@@ -8,7 +8,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <asm-generic/socket.h>
 #include <unistd.h>
 #include <poll.h>
 #include <utility>
@@ -33,6 +32,20 @@ bool TcpClient::reconnect() {
         return open();
     }
     return false;
+}
+
+
+bool TcpClient::setTimeout(int fd, uint32_t msTimeout) {
+    timeval timeout = { .tv_sec = 0, .tv_usec = msTimeout * 1'000 };
+    if(setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        log_tag_no(LOG_WARN, "set SO_RCVTIMEO");
+        return false;
+    }
+    if(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
+        log_tag_no(LOG_WARN, "set SO_RCVTIMEO");
+        return false;
+    }
+    return true;
 }
 
 TcpClient::TcpClient(sockaddr_in serverAddress)
@@ -82,12 +95,8 @@ bool TcpClient::open() {
         return false;
     }
 
-    timeval timeout = { .tv_sec = TIMEOUT_S, .tv_usec = 0 };
-    if(setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-        log_tag_no(LOG_WARN, "set SO_RCVTIMEO");
-    }
-    if(setsockopt(fd_, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
-        log_tag_no(LOG_WARN, "set SO_RCVTIMEO");
+    if(!setTimeout(fd_, TIMEOUT_SEC * 1'000)) {
+        log_tag_no(LOG_WARN, "set Timeout");
     }
 
     int reuse_addr = 0b1;
@@ -254,8 +263,10 @@ void TcpClient::update(bool checkWritable) {
 
 void TcpClient::close() {
     status_ = Status::Closed;
-    ::shutdown(fd_, SHUT_RDWR);
-    ::close(fd_);
+    if(fd_ >= 0) {
+        ::shutdown(fd_, SHUT_RDWR);
+        ::close(fd_);
+    }
 }
 
 TcpClient::~TcpClient() {

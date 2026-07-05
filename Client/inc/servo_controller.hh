@@ -5,7 +5,7 @@
 // PCA9685
 class ServoController : private I2cDevice {
     protected:
-    const char* LOG_TAG = "ServoController: ";
+    static constexpr std::string_view LOG_TAG = "ServoController: ";
     static constexpr uint8_t
         MAX_SERVOS = 16,
         I2C_ADDRESS = 0x40;

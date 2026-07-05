@@ -8,7 +8,7 @@
 // MPU6050
 class Gyroscope : private I2cDevice {
     protected:
-    const char* LOG_TAG = "Gyroscope: ";
+    static constexpr std::string_view LOG_TAG = "Gyroscope: ";
     static constexpr uint8_t
         I2C_ADDRESS = 0x68;
 

@@ -1,8 +1,9 @@
 #pragma once
 #include <cstdint>
+#include <string_view>
 
 class I2cDevice {
-    const char *LOG_TAG = "I2C";
+    static constexpr std::string_view LOG_TAG = "I2C";
     protected:
     int fd_;
     int adapter_;
