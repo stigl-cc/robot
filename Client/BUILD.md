@@ -4,15 +4,15 @@
   2) cmake + make
   3) v4l-utils for aarch64-linux (see [building v4l-utils for aarch64](#build-v4l-utils-for-aarch64-linux-cross))
 
-## Clone and cd into the repository
+## 1) Clone and cd into the repository
 `git@github.com:stigl-cc/robot.git`  
 `cd robot`  
 
-## Configure
+## 2) Configure
 `cmake -B build`  
 Note: If you need compile_commands.json for development, they will be generated at this point  
 
-## Compile
+## 3) Compile
 `cmake --build build --target Client`  
 Your executable should now be visible in `build/client/`  
 You can also remove the `--target Client`, and both parts of the project will be built.  

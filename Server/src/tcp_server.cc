@@ -71,7 +71,6 @@ bool TcpServer::open() {
 }
 
 void TcpServer::update(bool checkWritable) {
-    
 }
 
 void TcpServer::close() {
