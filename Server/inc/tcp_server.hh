@@ -3,17 +3,17 @@
 
 #include <cstdint>
 #include <netinet/in.h>
-#include <sys/poll.h>
+#include <string_view>
 
 class TcpServer {
     private:
     static constexpr std::string_view LOG_TAG = "TcpServer";
 
     static constexpr uint16_t
-        TIMEOUT_SEC = 3,
-        BIND_PORT = 8080;
+        BIND_PORT = 8080,
+        TIMEOUT_SEC = 3;
 
-    static constexpr SocketOptions::KeepAliveOptions KA_OPTIONS = {
+    static constexpr SocketOptions::KeepAliveOptions KEEPALIVE_OPTIONS = {
         .enabled = 1,
         .idleTime = 20,
         .interval = 12,

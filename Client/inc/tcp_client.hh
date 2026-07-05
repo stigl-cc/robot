@@ -1,9 +1,9 @@
 #pragma once
+#include <socket_options.hh>
 
 #include <cstdint>
 #include <netinet/in.h>
 #include <string_view>
-#include <sys/poll.h>
 
 class TcpClient {
     public:
@@ -25,6 +25,13 @@ class TcpClient {
     static constexpr uint32_t
         RECV_BUFFER_LEN = 8192;
 
+    static constexpr SocketOptions::KeepAliveOptions KEEPALIVE_OPTIONS = {
+        .enabled = 1,
+        .idleTime = 20,
+        .interval = 12,
+        .probes = 10,
+    };
+
     int fd_;
     uint8_t recvBuffer_[RECV_BUFFER_LEN];
 
@@ -40,8 +47,6 @@ class TcpClient {
 
     bool connect();
     bool reconnect();
-
-    bool setTimeout(int fd, uint32_t msTimeout);
 
     public:
     TcpClient(sockaddr_in server);

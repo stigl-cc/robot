@@ -1,3 +1,4 @@
+#include "socket_options.hh"
 #include <tcp_client.hh>
 #include <logger.hh>
 
@@ -34,20 +35,6 @@ bool TcpClient::reconnect() {
     return false;
 }
 
-
-bool TcpClient::setTimeout(int fd, uint32_t msTimeout) {
-    timeval timeout = { .tv_sec = 0, .tv_usec = msTimeout * 1'000 };
-    if(setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
-        log_tag_no(LOG_WARN, "set SO_RCVTIMEO");
-        return false;
-    }
-    if(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) < 0) {
-        log_tag_no(LOG_WARN, "set SO_RCVTIMEO");
-        return false;
-    }
-    return true;
-}
-
 TcpClient::TcpClient(sockaddr_in serverAddress)
     : fd_(-1), serverAddress_(serverAddress) {}
 
@@ -82,31 +69,30 @@ TcpClient& TcpClient::operator=(TcpClient&& other) {
 }
 
 bool TcpClient::open() {
-    if((fd_ = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    if((fd_ = socket(AF_INET, SOCK_STREAM, 0)) == 1) {
         log_tag_no(LOG_ERR, "open socket");
         status_ = Status::Failed;
         return false;
     }
 
-    if(fcntl(fd_, F_SETFL, O_NONBLOCK) < 0) {
+    if(fcntl(fd_, F_SETFL, O_NONBLOCK) == -1) {
         log_tag_no(LOG_ERR, "set O_NONBLOCK");
         close();
         status_ = Status::Failed;
         return false;
     }
 
-    if(!setTimeout(fd_, TIMEOUT_SEC * 1'000)) {
-        log_tag_no(LOG_WARN, "set Timeout");
-    }
-
     int reuse_addr = 0b1;
-    if(setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(reuse_addr)) < 0) {
+    if(setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(reuse_addr)) == -1) {
         log_tag_no(LOG_WARN, "set SO_REUSEADDR");
     }
 
-    int keepalive = 0b1;
-    if(setsockopt(fd_, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive))) {
-        log_tag_no(LOG_WARN, "set SO_KEEPALIVE");
+    if(!SocketOptions::setTimeout(fd_, TIMEOUT_SEC * 1'000)) {
+        log_tag_no(LOG_WARN, "set Timeout");
+    }
+
+    if(!SocketOptions::setKeepAlive(fd_, KEEPALIVE_OPTIONS)) {
+        log_tag(LOG_WARN, "set up KeepAlive");
     }
 
     sockaddr_in bind_address = {
@@ -114,8 +100,8 @@ bool TcpClient::open() {
         .sin_port = htons(BIND_PORT),
         .sin_addr = INADDR_ANY,
     };
-    if(bind(fd_, reinterpret_cast<sockaddr*>(&bind_address), sizeof(bind_address)) < 0) {
-        log_tag_no(LOG_WARN, "bind to address");
+    if(bind(fd_, reinterpret_cast<sockaddr*>(&bind_address), sizeof(bind_address)) == -1) {
+        log_tag_no(LOG_WARN, "bind");
     }
 
     return connect();
