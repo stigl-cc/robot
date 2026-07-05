@@ -1,4 +1,3 @@
-#include <cstdlib>
 #include <tcp_server.hh>
 #include <logger.hh>
 
@@ -69,6 +68,10 @@ bool TcpServer::open() {
     }
 
     return true;
+}
+
+void TcpServer::update(bool checkWritable) {
+    
 }
 
 void TcpServer::close() {

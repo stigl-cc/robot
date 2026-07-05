@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <netinet/in.h>
 #include <string_view>
+#include <vector>
 
 class TcpServer {
     private:
@@ -21,6 +22,7 @@ class TcpServer {
     };
 
     int fd_;
+    std::vector<int> clients;
 
     public:
     TcpServer();
@@ -31,6 +33,8 @@ class TcpServer {
     TcpServer& operator=(TcpServer&&);
 
     bool open();
+
+    void update(bool checkWritable);
 
     void close();
 };
