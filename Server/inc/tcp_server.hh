@@ -50,8 +50,8 @@ class TcpServer {
     TcpServer& operator=(TcpServer&&);
 
     bool open();
-
     void update();
-
     void close();
+
+    ~TcpServer();
 };

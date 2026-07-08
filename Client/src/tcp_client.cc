@@ -128,7 +128,6 @@ bool TcpClient::handlePollin() {
 
         if(ret == -1) {
             if(errno == EAGAIN || errno == EWOULDBLOCK) return false;
-            if(errno == EINTR) continue;
 
             // broken connection
             status_ = Status::Failed;
@@ -144,15 +143,15 @@ bool TcpClient::handlePollin() {
         }
 
         // actual data received here
-        int recvBufferConsumed = 0;
+        int recv_buffer_consumed = 0;
         do {
-            recvBufferConsumed += packet_.write(std::span<uint8_t>(recvBuffer_ + recvBufferConsumed, ret - recvBufferConsumed));
+            recv_buffer_consumed += packet_.write(std::span<uint8_t>(recvBuffer_ + recv_buffer_consumed, ret - recv_buffer_consumed));
 
             if(packet_.isPacketComplete()) {
                 // TODO: do something with the packet
                 packet_ = {};
             }
-        } while(recvBufferConsumed < ret);
+        } while(recv_buffer_consumed < ret);
     }
     return false;
 }
