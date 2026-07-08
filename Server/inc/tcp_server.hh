@@ -38,7 +38,9 @@ class TcpServer {
     std::queue<TcpSendPacket> sendPacketQueue_;
 
     void handlePollServer(int revents);
-    void handlePollClient(int revents);
+
+    bool handlePolloutClient();
+    bool handlePollinClient();
     void closeClient();
 
     public:

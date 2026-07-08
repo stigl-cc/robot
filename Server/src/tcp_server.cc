@@ -108,62 +108,56 @@ void TcpServer::handlePollServer(int revents) {
     }
 }
 
-void TcpServer::handlePollClient(int revents) {
+bool TcpServer::handlePollinClient() {
     int ret;
-    if(revents & POLLIN) {
-        while(true) {
-            ret = recv(client_, buffer_, BUFFER_LEN, 0);
+    while(true) {
+        ret = recv(client_, buffer_, BUFFER_LEN, 0);
 
-            if(ret == -1) {
-                if(errno != EAGAIN && errno != EWOULDBLOCK)
-                    break;
-                log_tag_no(LOG_ERR, "recv");
-            } else if(ret == 0) {
-                closeClient();
-                break;
-            }
-
-            int buffer_consumed = 0;
-            do {
-                buffer_consumed += recvPacket_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
-                if(recvPacket_.isPacketComplete()) {
-                    // TODO: do something with the packet
-                    recvPacket_ = {};
-                }
-            } while(buffer_consumed < ret);
+        if(ret == -1) {
+            if(errno != EAGAIN && errno != EWOULDBLOCK)
+                return false;
+            log_tag_no(LOG_ERR, "recv");
+            return true;
+        } else if(ret == 0) {
+            closeClient();
+            return true;
         }
-    }
 
-    if(revents & POLLOUT) {
+        int buffer_consumed = 0;
+        do {
+            buffer_consumed += recvPacket_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
+            if(recvPacket_.isPacketComplete()) {
+                // TODO: do something with the packet
+                recvPacket_ = {};
+            }
+        } while(buffer_consumed < ret);
+    }
+    return false;
+}
+
+bool TcpServer::handlePolloutClient() {
+    int ret;
+    do {
         TcpSendPacket& packet = sendPacketQueue_.front();
         size_t bytes_read = packet.read(buffer_, BUFFER_LEN);
 
         ret = send(client_, buffer_, bytes_read, 0);
         if(ret == -1) {
-            if(errno == EAGAIN || errno == EWOULDBLOCK)
-                ret = 0;
+            if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                return false;
+            }
             else {
                 log_tag_no(LOG_ERR, "send");
+                return true;
             }
         } else packet.advance(ret);
 
         if(packet.isPacketRead())
             sendPacketQueue_.pop();
-    }
-
-    if(revents & POLLERR || revents & POLLHUP) {
-        int error;
-        socklen_t error_len;
-
-        if(getsockopt(client_, SOL_SOCKET, SO_ERROR, &error, &error_len) == 0) {
-            if(error == 0)
-                return;
-            log_tag_no(LOG_ERR, "POLLERR: " + std::string(strerror(error)));
-        } else {
-            log_tag_no(LOG_ERR, "getsockopt");
-        }
-    }
+    } while(!sendPacketQueue_.empty());
+    return false;
 }
+
 
 void TcpServer::update() {
     int ret;
@@ -189,8 +183,31 @@ void TcpServer::update() {
 
     handlePollServer(fds[0].revents);
 
-    if(client_ >= 0)
-        handlePollClient(fds[1].revents);
+    if(client_ >= 0) {
+        const short& revents = fds[1].revents;
+        if(revents & POLLIN) {
+            if(handlePollinClient())
+                return;
+        }
+
+        if(revents & POLLERR || revents & POLLHUP) {
+            int error;
+            socklen_t error_len = sizeof(error);
+
+            if(getsockopt(client_, SOL_SOCKET, SO_ERROR, &error, &error_len) == 0) {
+                if(error == 0)
+                    return;
+                log_tag_no(LOG_ERR, "POLLERR: " + std::string(strerror(error)));
+            } else {
+                log_tag_no(LOG_ERR, "getsockopt");
+            }
+            return;
+        }
+
+        if(revents & POLLOUT) {
+            handlePolloutClient();
+        }
+    }
 }
 
 void TcpServer::closeClient() {

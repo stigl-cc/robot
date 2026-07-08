@@ -24,7 +24,7 @@ class TcpClient {
         MAX_RECONNECTS = 5;
 
     static constexpr uint32_t
-        RECV_BUFFER_LEN = 8192;
+        BUFFER_LEN = 8192;
 
     static constexpr SocketOptions::KeepAliveOptions KEEPALIVE_OPTIONS = {
         .enabled = 1,
@@ -34,7 +34,7 @@ class TcpClient {
     };
 
     int fd_;
-    uint8_t recvBuffer_[RECV_BUFFER_LEN];
+    uint8_t buffer_[BUFFER_LEN];
 
     TcpRecvPacket packet_;
 

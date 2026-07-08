@@ -39,7 +39,7 @@ TcpClient::TcpClient(sockaddr_in serverAddress)
 
 TcpClient::TcpClient(TcpClient&& other) {
     fd_ = std::exchange(other.fd_, -1);
-    memcpy(recvBuffer_, other.recvBuffer_, RECV_BUFFER_LEN);
+    memcpy(buffer_, other.buffer_, BUFFER_LEN);
     packet_ = std::exchange(other.packet_, {});
     status_ = std::exchange(other.status_, Status::Failed);
     serverAddress_ = std::exchange(other.serverAddress_, {});
@@ -53,7 +53,7 @@ TcpClient& TcpClient::operator=(TcpClient&& other) {
 
     if(fd_ >= 0) close();
     fd_ = std::exchange(other.fd_, -1);
-    memcpy(recvBuffer_, other.recvBuffer_, RECV_BUFFER_LEN);
+    memcpy(buffer_, other.buffer_, BUFFER_LEN);
     packet_ = std::exchange(other.packet_, {});
     status_ = std::exchange(other.status_, Status::Failed);
     serverAddress_ = std::exchange(other.serverAddress_, {});
@@ -124,7 +124,7 @@ bool TcpClient::isWritable() const {
 bool TcpClient::handlePollin() {
     int ret;
     while(true) {
-        ret = recv(fd_, recvBuffer_, RECV_BUFFER_LEN, 0);
+        ret = recv(fd_, buffer_, BUFFER_LEN, 0);
 
         if(ret == -1) {
             if(errno == EAGAIN || errno == EWOULDBLOCK) return false;
@@ -143,15 +143,15 @@ bool TcpClient::handlePollin() {
         }
 
         // actual data received here
-        int recv_buffer_consumed = 0;
+        int buffer_consumed = 0;
         do {
-            recv_buffer_consumed += packet_.write(std::span<uint8_t>(recvBuffer_ + recv_buffer_consumed, ret - recv_buffer_consumed));
+            buffer_consumed += packet_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
 
             if(packet_.isPacketComplete()) {
                 // TODO: do something with the packet
                 packet_ = {};
             }
-        } while(recv_buffer_consumed < ret);
+        } while(buffer_consumed < ret);
     }
     return false;
 }
