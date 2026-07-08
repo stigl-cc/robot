@@ -1,9 +1,8 @@
 #pragma once
-#include <optional>
 #include <packet.hh>
-#include <queue>
 #include <socket_options.hh>
 
+#include <queue>
 #include <cstdint>
 #include <netinet/in.h>
 #include <string_view>

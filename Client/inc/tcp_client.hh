@@ -2,6 +2,7 @@
 #include <socket_options.hh>
 #include <packet.hh>
 
+#include <queue>
 #include <cstdint>
 #include <netinet/in.h>
 #include <string_view>
@@ -36,12 +37,12 @@ class TcpClient {
     int fd_;
     uint8_t buffer_[BUFFER_LEN];
 
-    TcpRecvPacket packet_;
+    TcpRecvPacket recvPacket_;
+    std::queue<TcpSendPacket> sendPacketQueue_;
 
     enum Status status_;
     struct sockaddr_in serverAddress_;
     int reconnectCounter_ = 0;
-    bool isWritable_;
 
     bool handlePollin();
     bool handlePollout();
@@ -61,8 +62,7 @@ class TcpClient {
     bool open();
 
     Status getStatus() const;
-    bool isWritable() const;
-    void update(bool checkWritable);
+    void update();
 
     void close();
 

@@ -40,11 +40,11 @@ TcpClient::TcpClient(sockaddr_in serverAddress)
 TcpClient::TcpClient(TcpClient&& other) {
     fd_ = std::exchange(other.fd_, -1);
     memcpy(buffer_, other.buffer_, BUFFER_LEN);
-    packet_ = std::exchange(other.packet_, {});
+    recvPacket_ = std::move(other.recvPacket_);
+    sendPacketQueue_ = std::move(other.sendPacketQueue_);
     status_ = std::exchange(other.status_, Status::Failed);
     serverAddress_ = std::exchange(other.serverAddress_, {});
     reconnectCounter_ = std::exchange(other.reconnectCounter_, 0);
-    isWritable_ = std::exchange(other.isWritable_, false);
 }
 
 TcpClient& TcpClient::operator=(TcpClient&& other) {
@@ -54,11 +54,11 @@ TcpClient& TcpClient::operator=(TcpClient&& other) {
     if(fd_ >= 0) close();
     fd_ = std::exchange(other.fd_, -1);
     memcpy(buffer_, other.buffer_, BUFFER_LEN);
-    packet_ = std::exchange(other.packet_, {});
+    recvPacket_ = std::move(other.recvPacket_);
+    sendPacketQueue_ = std::move(other.sendPacketQueue_);
     status_ = std::exchange(other.status_, Status::Failed);
     serverAddress_ = std::exchange(other.serverAddress_, {});
     reconnectCounter_ = std::exchange(other.reconnectCounter_, 0);
-    isWritable_ = std::exchange(other.isWritable_, false);
 
     return *this;
 }
@@ -106,10 +106,6 @@ TcpClient::Status TcpClient::getStatus() const {
     return status_;
 }
 
-bool TcpClient::isWritable() const {
-    return isWritable_;
-}
-
 /*
   Check according to these:
 
@@ -145,11 +141,11 @@ bool TcpClient::handlePollin() {
         // actual data received here
         int buffer_consumed = 0;
         do {
-            buffer_consumed += packet_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
+            buffer_consumed += recvPacket_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
 
-            if(packet_.isPacketComplete()) {
+            if(recvPacket_.isPacketComplete()) {
                 // TODO: do something with the packet
-                packet_ = {};
+                recvPacket_ = {};
             }
         } while(buffer_consumed < ret);
     }
@@ -174,9 +170,28 @@ bool TcpClient::handlePollout() {
             log_tag_no(LOG_ERR, "getsockopt");
             return true;
         }
+    } else {
+        int ret;
+        do {
+            TcpSendPacket& packet = sendPacketQueue_.front();
+            size_t bytes_read = packet.read(buffer_, BUFFER_LEN);
+
+            ret = send(fd_, buffer_, bytes_read, 0);
+            if(ret == -1) {
+                if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                    return false;
+                } else {
+                    log_tag_no(LOG_ERR, "send");
+                    status_ = Status::Failed;
+                    return true;
+                }
+            } else packet.advance(ret);
+
+            if(packet.isPacketRead())
+                sendPacketQueue_.pop();
+        } while(!sendPacketQueue_.empty());
     }
 
-    isWritable_ = true;
     return false;
 }
 
@@ -193,10 +208,10 @@ void TcpClient::handlePollerr() {
     }
 }
 
-void TcpClient::update(bool checkWritable) {
+void TcpClient::update() {
     int ret;
 
-    short checkPollout = (status_ == Status::Connecting || checkWritable) ? POLLOUT : 0;
+    short checkPollout = (status_ == Status::Connecting || !sendPacketQueue_.empty()) ? POLLOUT : 0;
     pollfd fds = {
         .fd = fd_,
         .events = static_cast<short>(POLLIN | checkPollout),
@@ -223,8 +238,7 @@ void TcpClient::update(bool checkWritable) {
     if(fds.revents & POLLOUT) {
         if(handlePollout())
             return;
-    } else if(checkWritable)
-        isWritable_ = false;
+    }
 }
 
 void TcpClient::close() {

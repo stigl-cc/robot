@@ -78,7 +78,7 @@ int main() {
             break;
         }
 
-        transceiver.update(false);
+        transceiver.update();
         usleep(100'000);
     }
     transceiver.close();
