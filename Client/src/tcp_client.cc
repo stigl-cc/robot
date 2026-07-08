@@ -1,8 +1,7 @@
-#include "socket_options.hh"
+#include <socket_options.hh>
 #include <tcp_client.hh>
 #include <logger.hh>
 
-#include <algorithm>
 #include <sys/poll.h>
 #include <cerrno>
 #include <sys/fcntl.h>
@@ -41,9 +40,7 @@ TcpClient::TcpClient(sockaddr_in serverAddress)
 TcpClient::TcpClient(TcpClient&& other) {
     fd_ = std::exchange(other.fd_, -1);
     memcpy(recvBuffer_, other.recvBuffer_, RECV_BUFFER_LEN);
-    recvPacketBuffer_ = std::exchange(other.recvPacketBuffer_, nullptr);
-    recvPacketLength_ = std::exchange(other.recvPacketLength_, 0);
-    recvPacketPosition_ = std::exchange(other.recvPacketPosition_, 0);
+    packet_ = std::exchange(other.packet_, {});
     status_ = std::exchange(other.status_, Status::Failed);
     serverAddress_ = std::exchange(other.serverAddress_, {});
     reconnectCounter_ = std::exchange(other.reconnectCounter_, 0);
@@ -57,9 +54,7 @@ TcpClient& TcpClient::operator=(TcpClient&& other) {
     if(fd_ >= 0) close();
     fd_ = std::exchange(other.fd_, -1);
     memcpy(recvBuffer_, other.recvBuffer_, RECV_BUFFER_LEN);
-    recvPacketBuffer_ = std::exchange(other.recvPacketBuffer_, nullptr);
-    recvPacketLength_ = std::exchange(other.recvPacketLength_, 0);
-    recvPacketPosition_ = std::exchange(other.recvPacketPosition_, 0);
+    packet_ = std::exchange(other.packet_, {});
     status_ = std::exchange(other.status_, Status::Failed);
     serverAddress_ = std::exchange(other.serverAddress_, {});
     reconnectCounter_ = std::exchange(other.reconnectCounter_, 0);
@@ -69,7 +64,7 @@ TcpClient& TcpClient::operator=(TcpClient&& other) {
 }
 
 bool TcpClient::open() {
-    if((fd_ = socket(AF_INET, SOCK_STREAM, 0)) == 1) {
+    if((fd_ = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         log_tag_no(LOG_ERR, "open socket");
         status_ = Status::Failed;
         return false;
@@ -126,6 +121,79 @@ bool TcpClient::isWritable() const {
   Broken Connection   Don't  Don't   Yes            recv() returns -1 (ECONNRESET)
 */
 
+bool TcpClient::handlePollin() {
+    int ret;
+    while(true) {
+        ret = recv(fd_, recvBuffer_, RECV_BUFFER_LEN, 0);
+
+        if(ret == -1) {
+            if(errno == EAGAIN || errno == EWOULDBLOCK) return false;
+            if(errno == EINTR) continue;
+
+            // broken connection
+            status_ = Status::Failed;
+            log_tag_no(LOG_ERR, "recv");
+
+            if(errno == ETIMEDOUT || errno == ECONNRESET)
+                reconnect();
+            return true;
+        } else if(ret == 0) {
+            // normal socket closure
+            status_ = Status::Closed;
+            return true;
+        }
+
+        // actual data received here
+        int recvBufferConsumed = 0;
+        do {
+            recvBufferConsumed += packet_.write(std::span<uint8_t>(recvBuffer_ + recvBufferConsumed, ret - recvBufferConsumed));
+
+            if(packet_.isPacketComplete()) {
+                // TODO: do something with the packet
+                packet_ = {};
+            }
+        } while(recvBufferConsumed < ret);
+    }
+    return false;
+}
+
+bool TcpClient::handlePollout() {
+    if(status_ == Status::Connecting) {
+        int error;
+        socklen_t error_len = sizeof(error);
+
+        if(getsockopt(fd_, SOL_SOCKET, SO_ERROR, &error, &error_len) == 0) {
+            if(error == 0) { // successful connection
+                log_tag(LOG_INFO, "Connection successful");
+                status_ = Status::Connected;
+            } else { // connection failed
+                log_tag_no(LOG_ERR, "connection");
+                status_ = Status::Failed;
+                return true;
+            }
+        } else {
+            log_tag_no(LOG_ERR, "getsockopt");
+            return true;
+        }
+    }
+
+    isWritable_ = true;
+    return false;
+}
+
+void TcpClient::handlePollerr() {
+    status_ = Status::Failed;
+    int error;
+    socklen_t error_len = sizeof(error);
+    if(getsockopt(fd_, SOL_SOCKET, SO_ERROR, &error, &error_len) == 0) {
+        if(error == 0)
+            return;
+        log_tag_no(LOG_ERR, "POLLERR");
+    } else {
+        log_tag_no(LOG_ERR, "getsockopt");
+    }
+}
+
 void TcpClient::update(bool checkWritable) {
     int ret;
 
@@ -144,107 +212,20 @@ void TcpClient::update(bool checkWritable) {
         return;
 
     if(fds.revents & POLLIN) {
-        ret = recv(fd_, recvBuffer_, RECV_BUFFER_LEN, 0);
-
-        if(ret == -1) {
-            if(errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
-                return;
-
-            // broken connection
-            status_ = Status::Failed;
-            log_tag_no(LOG_ERR, "recv");
-
-            if(errno == ETIMEDOUT || errno == ECONNRESET)
-                reconnect();
-
+        if(handlePollin())
             return;
-        } else if(ret == 0) {
-            // normal socket closure
-            status_ = Status::Closed;
-            return;
-        }
+    }
 
-        // actual data received here
-
-        /*
-          ret .. length for recv
-          recvBuffer_ .. buffer for recv
-          recvPacketBuffer_ .. buffer for packet
-          recvPacketLength_ .. length for packet
-          recvPacketPosition_ .. how filled is the packet already
-        */
-
-        int recvBufferIndex = 0;
-
-        do {
-            // read recvPacketPosition_
-            while (recvPacketPosition_ < 4 && recvBufferIndex < ret) {
-                recvPacketLength_ |= recvBuffer_[recvBufferIndex] << (3 - recvPacketPosition_) * 8;
-                recvPacketPosition_++;
-                recvBufferIndex++;
-            }
-
-            if (recvPacketPosition_ >= 4 && recvPacketBuffer_ == nullptr) {
-                recvPacketBuffer_ = new uint8_t[recvPacketLength_];
-            }
-
-            size_t copyLength = std::min<size_t>(recvPacketLength_ - recvPacketPosition_, ret - recvBufferIndex);
-
-            memcpy(recvPacketBuffer_ + recvPacketPosition_, recvBuffer_ + recvBufferIndex, copyLength);
-
-            recvBufferIndex += copyLength;
-            recvPacketPosition_ += copyLength;
-
-            if (recvPacketPosition_ >= recvPacketLength_ - 1) {
-                // do something with our packet here
-
-                // delete packet
-                delete recvPacketBuffer_;
-                recvPacketLength_ = 0;
-                recvPacketPosition_ = 0;
-                recvPacketBuffer_ = nullptr;
-            }
-        } while (recvBufferIndex < ret);
+    if((fds.revents & POLLERR) || (fds.revents & POLLHUP)) {
+        handlePollerr();
+        return;
     }
 
     if(fds.revents & POLLOUT) {
-        if(status_ == Status::Connecting) {
-            int error;
-            socklen_t error_len = sizeof(error);
-
-            if(getsockopt(fd_, SOL_SOCKET, SO_ERROR, &error, &error_len) == 0) {
-                if(error == 0) { // successful connection
-                    log_tag(LOG_INFO, "Connection successful");
-                    status_ = Status::Connected;
-                    return;
-                } else { // connection failed
-                    log_tag_no(LOG_ERR, "connection");
-                    status_ = Status::Failed;
-                    return;
-                }
-            } else {
-                log_tag_no(LOG_ERR, "getsockopt");
-                return;
-            }
-        }
-
-        isWritable_ = true;
-    }
-
-    if(fds.revents & POLLERR || fds.revents & POLLHUP) {
-        status_ = Status::Failed;
-        int error;
-        socklen_t error_len = sizeof(error);
-        if(getsockopt(fd_, SOL_SOCKET, SO_ERROR, &error, &error_len) == 0) {
-            if(error == 0)
-                return;
-            log_tag_no(LOG_ERR, "POLLERR");
+        if(handlePollout())
             return;
-        } else {
-            log_tag_no(LOG_ERR, "getsockopt");
-            return;
-        }
-    }
+    } else if(checkWritable)
+        isWritable_ = false;
 }
 
 void TcpClient::close() {
@@ -257,7 +238,4 @@ void TcpClient::close() {
 
 TcpClient::~TcpClient() {
     close();
-
-    if(recvPacketBuffer_)
-        delete[] recvPacketBuffer_;
 }

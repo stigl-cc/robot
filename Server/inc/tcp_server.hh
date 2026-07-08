@@ -1,10 +1,16 @@
 #pragma once
+#include <optional>
+#include <packet.hh>
+#include <queue>
 #include <socket_options.hh>
 
 #include <cstdint>
 #include <netinet/in.h>
 #include <string_view>
-#include <vector>
+
+/*
+  We will only ever handle 1 truly active connection.
+ */
 
 class TcpServer {
     private:
@@ -14,6 +20,8 @@ class TcpServer {
         BIND_PORT = 8080,
         TIMEOUT_SEC = 3;
 
+    static constexpr size_t BUFFER_LEN = 8192;
+
     static constexpr SocketOptions::KeepAliveOptions KEEPALIVE_OPTIONS = {
         .enabled = 1,
         .idleTime = 20,
@@ -22,7 +30,16 @@ class TcpServer {
     };
 
     int fd_;
-    std::vector<int> clients;
+    int client_;
+
+    uint8_t buffer_[BUFFER_LEN];
+
+    TcpRecvPacket recvPacket_;
+    std::queue<TcpSendPacket> sendPacketQueue_;
+
+    void handlePollServer(int revents);
+    void handlePollClient(int revents);
+    void closeClient();
 
     public:
     TcpServer();
@@ -34,7 +51,7 @@ class TcpServer {
 
     bool open();
 
-    void update(bool checkWritable);
+    void update();
 
     void close();
 };

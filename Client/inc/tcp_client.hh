@@ -1,5 +1,6 @@
 #pragma once
 #include <socket_options.hh>
+#include <packet.hh>
 
 #include <cstdint>
 #include <netinet/in.h>
@@ -35,15 +36,16 @@ class TcpClient {
     int fd_;
     uint8_t recvBuffer_[RECV_BUFFER_LEN];
 
-    uint8_t* recvPacketBuffer_ = nullptr;
-    size_t
-        recvPacketLength_ = 0,
-        recvPacketPosition_ = 0;
+    TcpRecvPacket packet_;
 
     enum Status status_;
     struct sockaddr_in serverAddress_;
     int reconnectCounter_ = 0;
     bool isWritable_;
+
+    bool handlePollin();
+    bool handlePollout();
+    void handlePollerr();
 
     bool connect();
     bool reconnect();
