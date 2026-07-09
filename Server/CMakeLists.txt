@@ -11,9 +11,14 @@ find_package(llama REQUIRED)
 # Compile shared separately since we are cross compiling
 add_subdirectory(${CMAKE_SOURCE_DIR}/../Shared ${CMAKE_BINARY_DIR}/shared)
 
+if (NOT DEFINED LLAMA_INSTALL_VERSION)
+    set(LLAMA_INSTALL_VERSION "1.0.0")
+endif()
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/llama.cpp/tools/mtmd ${CMAKE_BINARY_DIR}/llama.cpp-mtmd)
+
 aux_source_directory(src SERVER_SOURCES)
 
 add_executable(server ${SERVER_SOURCES})
 target_include_directories(server PRIVATE inc)
 target_compile_options(server PRIVATE -Wall -Wextra -Wpedantic -Wno-missing-designated-field-initializers -Wno-missing-field-initializers -Wold-style-cast)
-target_link_libraries(server PRIVATE shared llama)
+target_link_libraries(server PRIVATE shared llama mtmd)
