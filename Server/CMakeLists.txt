@@ -15,6 +15,7 @@ if (NOT DEFINED LLAMA_INSTALL_VERSION)
     set(LLAMA_INSTALL_VERSION "1.0.0")
 endif()
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/llama.cpp/tools/mtmd ${CMAKE_BINARY_DIR}/llama.cpp-mtmd)
+set_target_properties(mtmd PROPERTIES COMPILE_FLAGS "-w")
 
 aux_source_directory(src SERVER_SOURCES)
 
