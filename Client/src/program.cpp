@@ -18,13 +18,14 @@ int main() {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    sockaddr_in server = {
+    sockaddr_in listen_addr = {
         .sin_family = AF_INET,
         .sin_port = htons(8080)
     };
-    inet_pton(AF_INET, "127.0.0.1", &server.sin_addr);
 
-    TcpClient tcp_client(server);
+    inet_pton(AF_INET, "127.0.0.1", &listen_addr.sin_addr);
+
+    TcpClient tcp_client(listen_addr);
 
     log(LOG_INFO, "Starting TCP client");
     tcp_client.open();
@@ -54,7 +55,8 @@ int main() {
     return 0;
 }
 
-/*    uint8_t servo_min = 0, servo_max = 5;
+/*
+  uint8_t servo_min = 0, servo_max = 5;
 ServoController servo(1);
 
 std::cout << "Initializing servo with " << servo.Begin(false) << "\n";
