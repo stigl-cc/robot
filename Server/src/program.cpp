@@ -4,30 +4,28 @@
 #include <csignal>
 #include <atomic>
 
-std::atomic<bool> shouldApplicationRun = true;
+std::atomic<bool> should_application_run = true;
 
 void signal_handler(int) {
-    shouldApplicationRun = false;
+    should_application_run = false;
 }
 
 int main() {
-    shouldApplicationRun = true;
-
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    TcpServer tcpServer;
+    TcpServer tcp_server;
 
     log(LOG_INFO, "Starting TCP listener");
-    tcpServer.open();
+    tcp_server.open();
 
-    while(shouldApplicationRun) {
-        tcpServer.update();
+    while(should_application_run) {
+        tcp_server.update();
     }
 
     log(LOG_INFO, "Closing TCP listener");
-    tcpServer.close();
+    tcp_server.close();
 
-    log(LOG_INFO, "Exiting application");
+    log(LOG_INFO, "Exiting server");
     return 0;
 }
