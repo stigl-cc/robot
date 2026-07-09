@@ -1,3 +1,4 @@
+#include <language_model.hh>
 #include <tcp_server.hh>
 #include <logger.hh>
 
@@ -15,6 +16,10 @@ int main() {
     signal(SIGTERM, signal_handler);
 
     TcpServer tcp_server;
+    LanguageModel language_model;
+    language_model.open();
+
+    language_model.close();
 
     log(LOG_INFO, "Starting TCP listener");
     tcp_server.open();
