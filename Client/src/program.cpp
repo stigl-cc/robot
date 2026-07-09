@@ -60,7 +60,7 @@ int main() {
     sockaddr_in server;
     server.sin_family = AF_INET;
     inet_pton(AF_INET, "127.0.0.1", &server.sin_addr);
-    server.sin_port = htons(3214);
+    server.sin_port = htons(8080);
 
     TcpClient transceiver(server);
     transceiver.open();
