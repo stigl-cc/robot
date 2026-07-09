@@ -219,10 +219,13 @@ void TcpClient::update() {
 
     ret = poll(&fds, 1, 10);
 
-    if(ret == -1)
+    if(ret == -1) {
+        if(errno == EINTR)
+            return;
         log_tag_no(LOG_ERR, "poll");
+    }
 
-    if(ret <= 0)
+    if(ret == 0)
         return;
 
     if(fds.revents & POLLIN) {

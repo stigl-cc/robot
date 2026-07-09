@@ -175,10 +175,13 @@ void TcpServer::update() {
 
     ret = poll(fds, client_ == -1 ? 1 : 2, 1000);
 
-    if(ret == -1)
+    if(ret == -1) {
+        if(errno == EINTR)
+            return;
         log_tag_no(LOG_ERR, "poll");
+    }
 
-    if(ret <= 0)
+    if(ret == 0) // nothing to do
         return;
 
     handlePollServer(fds[0].revents);
