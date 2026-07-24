@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
 #include <string_view>
 
 class LanguageModel {
@@ -27,7 +28,7 @@ class LanguageModel {
         n_past = 0,    // tokens processed
         n_batch = 512, // tokens to process at a time
         n_ctx = 8192;  // total tokens in context
-
+    
     std::vector<std::pair<std::string, std::string>> message_queue_;
 
     llama_context_ptr context_;
@@ -42,7 +43,14 @@ class LanguageModel {
     mtmd::batch_ptr mtmd_batch_;
 
     std::string format_text_input();
+
+    float *get_embedding(const mtmd_input_chunk *chunk, size_t chunks_len, const mtmd::input_chunks& chunks);
+    void tokenize_chunk(size_t i, size_t chunks_len, const mtmd::input_chunks& chunks);
     void tokenize_inputs();
+
+    void logits(int, std::vector<llama_token_data> &cur, llama_token_data_array &cur_p);
+    llama_token sample(int);
+    std::string generate_text();
 
     public:
     LanguageModel();
