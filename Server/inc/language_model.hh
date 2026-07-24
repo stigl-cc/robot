@@ -1,8 +1,11 @@
 #pragma once
-#include <llama.h>
+#include <llama-cpp.h>
+#include <mtmd.h>
+
 #include <logger.hh>
 
 #include <cstdint>
+#include <span>
 #include <string_view>
 
 class LanguageModel {
@@ -15,13 +18,31 @@ class LanguageModel {
 
     // TODO: Replace with some kind of more universal model path system
     static constexpr std::string_view
-        modelPath_ = "/data/gemma-4-E4B-it-Q6_K.gguf",
-        modelMmprojPath_ = "/data/mmproj-BF16.gguf";
+        MODEL_PATH = "/data/gemma-4-E4B-it-Q6_K.gguf",
+        MODEL_MMPROJ_PATH = "/data/mmproj-BF16.gguf",
+        MODEL_FORMAT_TEMPLATE = "gemma";
 
-    llama_context *context_;
-    llama_model *model_;
-    llama_sampler *sampler_;
+    uint32_t images_to_mark = 0;
+    llama_pos
+        n_past = 0,    // tokens processed
+        n_batch = 512, // tokens to process at a time
+        n_ctx = 8192;  // total tokens in context
+
+    std::vector<std::pair<std::string, std::string>> message_queue_;
+
+    llama_context_ptr context_;
+    llama_model_ptr model_;
+    llama_sampler_ptr sampler_;
+
     const llama_vocab *vocabulary_;
+
+    mtmd::context_ptr mtmd_context_;
+    mtmd::bitmaps mtmd_bitmaps_;
+
+    mtmd::batch_ptr mtmd_batch_;
+
+    std::string format_text_input();
+    void tokenize_inputs();
 
     public:
     LanguageModel();
@@ -30,8 +51,13 @@ class LanguageModel {
 
     LanguageModel(LanguageModel&&);
     LanguageModel& operator=(LanguageModel&&);
-    
+
     void open();
+
+    void load_text(std::string text);
+    void load_media(const std::span<uint8_t> data);
+
+    void test();
 
     void close();
     ~LanguageModel();

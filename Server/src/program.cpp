@@ -17,9 +17,7 @@ int main() {
 
     TcpServer tcp_server;
     LanguageModel language_model;
-    language_model.open();
-
-    language_model.close();
+    language_model.test();
 
     log(LOG_INFO, "Starting TCP listener");
     tcp_server.open();
