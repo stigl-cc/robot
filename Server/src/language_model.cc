@@ -356,13 +356,10 @@ LanguageModel::~LanguageModel() {
     close();
 }
 
-
 void LanguageModel::test() {
     open();
 
     load_text("How would you describe the effect of donald trump on the economy, say 50events, in the format {actions: [ {\"type\":\"positive\", name: \"increase tarrifs\"} ]}");
-    //std::string a = format_text_input();
-    //std::cout << std::endl << std::endl << a << std::endl << std::endl;
 
     tokenize_inputs();
     std::cout << generate_text() << "\n";
