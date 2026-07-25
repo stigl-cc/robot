@@ -53,11 +53,14 @@ const std::vector<uint8_t>& TcpRecvPacket::getBuffer() const {
 }
 
 TcpSendPacket::TcpSendPacket(const std::span<uint8_t>& data) : contents_() {
-    uint32_t total_length = htole32(static_cast<uint32_t>(data.size()));
-    contents_.reserve(sizeof(total_length) + data.size());
+    packetlen_t total_length = static_cast<packetlen_t>(data.size());
+    packetlen_t total_length_le = htole32(total_length);
+    contents_.reserve(sizeof(packetlen_t) + data.size());
 
-    const uint8_t* total_length_bytes = reinterpret_cast<const uint8_t*>(&total_length);
-    contents_.insert(contents_.end(), total_length_bytes, total_length_bytes + sizeof(total_length));
+    for(int i =sizeof(packetlen_t) -1; i >= 0; i--) {
+        uint8_t byte = (total_length_le >> (i * 8)) & 0xff;
+        contents_.push_back(byte);
+    }
 
     contents_.insert(contents_.end(), data.begin(), data.end());
 }

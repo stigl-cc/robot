@@ -5,11 +5,13 @@
 #include <sys/types.h>
 #include <vector>
 
+typedef uint32_t packetlen_t;
+
 // Constructing the buffer by parts, then the buffer can be extracted
 class TcpRecvPacket {
     private:
     uint8_t headerBytesWritten_;
-    uint32_t totalLength_;
+    packetlen_t totalLength_;
     std::vector<uint8_t> contents_;
 
     public:
@@ -28,7 +30,7 @@ class TcpRecvPacket {
 // Buffer provided instantly, then it is extracted by parts
 class TcpSendPacket {
     private:
-    uint32_t readLength_;
+    packetlen_t readLength_;
     std::vector<uint8_t> contents_;
 
     public:
