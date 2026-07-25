@@ -36,6 +36,9 @@ int main() {
             std::cout << "Connecting\n";
         } else if(status == TcpClient::Status::Connected) {
             std::cout << "Connected\n";
+            std::string buffer = "Hello, World!\n";
+            TcpSendPacket packet_to_send(std::span<uint8_t>(reinterpret_cast<uint8_t*>(buffer.data()), buffer.size()));
+            tcp_client.send(packet_to_send);
         } else if(status == TcpClient::Status::Closed) {
             std::cout << "Closed\n";
             break;

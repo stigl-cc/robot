@@ -61,6 +61,8 @@ class TcpClient {
 
     bool open();
 
+    void send(const TcpSendPacket& packet);
+
     Status getStatus() const;
     void update();
 

@@ -127,6 +127,8 @@ bool TcpServer::handlePollinClient() {
         do {
             buffer_consumed += recvPacket_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
             if(recvPacket_.isPacketComplete()) {
+                std::vector<uint8_t> buffer = recvPacket_.getBuffer();
+                std::cout << std::string(reinterpret_cast<char*>(buffer.data()), buffer.size()) << "\n";
                 // TODO: do something with the packet
                 recvPacket_ = {};
             }

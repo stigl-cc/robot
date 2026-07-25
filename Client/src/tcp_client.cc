@@ -102,6 +102,10 @@ bool TcpClient::open() {
     return connect();
 }
 
+void TcpClient::send(const TcpSendPacket& packet) {
+    sendPacketQueue_.push(packet);
+}
+
 TcpClient::Status TcpClient::getStatus() const {
     return status_;
 }
@@ -176,7 +180,7 @@ bool TcpClient::handlePollout() {
             TcpSendPacket& packet = sendPacketQueue_.front();
             size_t bytes_read = packet.read(buffer_, BUFFER_LEN);
 
-            ret = send(fd_, buffer_, bytes_read, 0);
+            ret = ::send(fd_, buffer_, bytes_read, 0);
             if(ret == -1) {
                 if(errno == EAGAIN || errno == EWOULDBLOCK) {
                     return false;
