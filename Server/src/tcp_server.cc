@@ -190,7 +190,7 @@ void TcpServer::update() {
         }
     };
 
-    ret = poll(fds, client_ == -1 ? 1 : 2, 1000);
+    ret = poll(fds, client_ == -1 ? 1 : 2, 100);
 
     if(ret == -1) {
         if(errno == EINTR)
