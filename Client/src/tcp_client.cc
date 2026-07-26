@@ -127,7 +127,8 @@ bool TcpClient::handlePollin() {
         ret = recv(fd_, buffer_, BUFFER_LEN, 0);
 
         if(ret == -1) {
-            if(errno == EAGAIN || errno == EWOULDBLOCK) return false;
+            if(errno == EAGAIN || errno == EWOULDBLOCK)
+                return false;
 
             // broken connection
             status_ = Status::Failed;
@@ -148,6 +149,10 @@ bool TcpClient::handlePollin() {
             buffer_consumed += recvPacket_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
 
             if(recvPacket_.isPacketComplete()) {
+                std::vector<uint8_t> buffer = recvPacket_.getBuffer();
+                sendPacketQueue_.push(TcpSendPacket(std::span<uint8_t>(buffer.data(), buffer.size())));
+                std::cout << buffer.size() << "\n";
+
                 // TODO: do something with the packet
                 recvPacket_ = {};
             }
@@ -174,7 +179,7 @@ bool TcpClient::handlePollout() {
             log_tag_no(LOG_ERR, "getsockopt");
             return true;
         }
-    } else {
+    } else if(status_ == Status::Connected){
         int ret;
         do {
             TcpSendPacket& packet = sendPacketQueue_.front();

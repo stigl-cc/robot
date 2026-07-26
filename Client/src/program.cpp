@@ -8,6 +8,7 @@
 #include <atomic>
 #include <arpa/inet.h>
 
+TcpClient::Status last_status = TcpClient::Status::Closed;
 std::atomic<bool> should_application_run = true;
 
 void signal_handler(int) {
@@ -30,22 +31,29 @@ int main() {
     log(LOG_INFO, "Starting TCP client");
     tcp_client.open();
 
+    uint8_t data[1] = { 0x00 };
+    TcpSendPacket packet_to_send(std::span<uint8_t>(reinterpret_cast<uint8_t*>(data), 1));
+    tcp_client.send(packet_to_send);
+
     while(should_application_run) {
         TcpClient::Status status = tcp_client.getStatus();
-        if(status == TcpClient::Status::Connecting) {
-            std::cout << "Connecting\n";
-        } else if(status == TcpClient::Status::Connected) {
-            std::cout << "Connected\n";
-            std::string buffer = "Hello, World!\n";
-            TcpSendPacket packet_to_send(std::span<uint8_t>(reinterpret_cast<uint8_t*>(buffer.data()), buffer.size()));
-            tcp_client.send(packet_to_send);
-        } else if(status == TcpClient::Status::Closed) {
-            std::cout << "Closed\n";
-            break;
-        } else if(status == TcpClient::Status::Failed) {
-            std::cout << "Failed\n";
-            break;
+        if(last_status != status) {
+            switch(status) {
+                case TcpClient::Status::Connecting:
+                    std::cout << "Connecting\n";
+                    break;
+                case TcpClient::Status::Connected:
+                    std::cout << "Connected\n";
+                    break;
+                case TcpClient::Status::Closed:
+                    std::cout << "Closed\n";
+                    break;
+                case TcpClient::Status::Failed:
+                    std::cout << "Failed\n";
+                    break;
+            }
         }
+        last_status = status;
 
         tcp_client.update();
         usleep(100'000);

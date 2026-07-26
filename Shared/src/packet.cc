@@ -67,7 +67,7 @@ TcpSendPacket::TcpSendPacket(const std::span<uint8_t>& data) : contents_() {
 
 size_t TcpSendPacket::read(uint8_t* buffer, size_t size) {
     size = std::min(contents_.size() - readLength_, size);
-    memcpy(buffer, contents_.data(), size);
+    memcpy(buffer + readLength_, contents_.data(), size);
     return size;
 }
 

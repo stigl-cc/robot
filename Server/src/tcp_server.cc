@@ -1,3 +1,4 @@
+#include <packet.hh>
 #include <tcp_server.hh>
 #include <logger.hh>
 
@@ -114,7 +115,7 @@ bool TcpServer::handlePollinClient() {
         ret = recv(client_, buffer_, BUFFER_LEN, 0);
 
         if(ret == -1) {
-            if(errno != EAGAIN && errno != EWOULDBLOCK)
+            if(errno == EAGAIN || errno == EWOULDBLOCK)
                 return false;
             log_tag_no(LOG_ERR, "recv");
             return true;
@@ -128,7 +129,17 @@ bool TcpServer::handlePollinClient() {
             buffer_consumed += recvPacket_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
             if(recvPacket_.isPacketComplete()) {
                 std::vector<uint8_t> buffer = recvPacket_.getBuffer();
-                std::cout << std::string(reinterpret_cast<char*>(buffer.data()), buffer.size()) << "\n";
+                std::cout << "[ ";
+
+                for(uint8_t byte : buffer) {
+                    std::cout << std::hex << "0x" << static_cast<int>(byte) << ", ";
+                }
+
+                std::cout << "Length: " << std::dec << buffer.size() << "]\n";
+                buffer.push_back(static_cast<uint8_t>(buffer.size()));
+
+                sendPacketQueue_.push(TcpSendPacket(std::span<uint8_t>(buffer.data(), buffer.size())));
+
                 // TODO: do something with the packet
                 recvPacket_ = {};
             }
