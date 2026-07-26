@@ -171,7 +171,6 @@ bool TcpServer::handlePolloutClient() {
     return false;
 }
 
-
 void TcpServer::update() {
     int ret;
     pollfd fds[2] = {
