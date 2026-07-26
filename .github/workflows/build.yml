@@ -11,7 +11,7 @@ jobs:
       - name: Cache packages
         uses: awalsh128/cache-apt-pkgs-action@master
         with:
-          packages: gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libllama-dev
+          packages: gcc-15-aarch64-linux-gnu g++-15-aarch64-linux-gnu libllama-dev
           version: 1.0
           execute_install_scripts: true
 
