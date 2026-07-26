@@ -58,6 +58,11 @@ bool TcpServer::open() {
         log_tag_no(LOG_WARN, "set SO_REUSEADDR");
     }
 
+    int nodelay = 0b1;
+    if(setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay)) == -1) {
+        log_tag_no(LOG_WARN, "set TCP_NODELAY");
+    }
+
     if(!SocketOptions::setTimeout(fd_, TIMEOUT_SEC * 1'000)) {
         log_tag_no(LOG_WARN, "set Timeout");
     }
