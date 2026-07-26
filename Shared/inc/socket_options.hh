@@ -15,6 +15,7 @@ class SocketOptions {
             probes;
     };
 
+    static bool setNoDelay(int fd, int32_t noDelay);
     static bool setTimeout(int fd, uint32_t msTimeout);
     static bool setKeepAlive(int fd, KeepAliveOptions options);
 };

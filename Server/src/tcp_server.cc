@@ -58,9 +58,8 @@ bool TcpServer::open() {
         log_tag_no(LOG_WARN, "set SO_REUSEADDR");
     }
 
-    int nodelay = 0b1;
-    if(setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay)) == -1) {
-        log_tag_no(LOG_WARN, "set TCP_NODELAY");
+    if(!SocketOptions::setNoDelay(fd_, 1)) {
+        log_tag_no(LOG_WARN, "set NoDelay");
     }
 
     if(!SocketOptions::setTimeout(fd_, TIMEOUT_SEC * 1'000)) {
@@ -107,6 +106,13 @@ void TcpServer::handlePollServer(int revents) {
         if(client_ >= 0)
             closeClient();
         client_ = ret;
+
+        SocketOptions::setNoDelay(client_, 1);
+
+        if(fcntl(client_, F_SETFL, O_NONBLOCK) == -1) {
+            log_tag_no(LOG_ERR, "set O_NONBLOCK for client");
+            close();
+        }
     }
 
     if(revents & POLLERR || revents & POLLHUP) {

@@ -3,6 +3,16 @@
 
 #include <sys/socket.h>
 #include <netinet/tcp.h>
+#include <netinet/in.h>
+
+bool SocketOptions::setNoDelay(int fd, int32_t noDelay) {
+    if(setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &noDelay, sizeof(noDelay)) == -1) {
+        log_tag_no(LOG_WARN, "set TCP_NODELAY");
+        return false;
+    }
+
+    return true;
+}
 
 bool SocketOptions::setTimeout(int fd, uint32_t msTimeout) {
     timeval timeout = { .tv_sec = msTimeout / 1'000, .tv_usec = msTimeout % 1'000 };
