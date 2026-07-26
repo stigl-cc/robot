@@ -15,7 +15,7 @@ jobs:
       #    version: 1.0
       #    execute_install_scripts: true
       - name: Install packages
-        run: apt update && apt install gcc-15-aarch64-linux-gnu g++-15-aarch64-linux-gnu libllama-dev
+        run: sudo apt update && sudo apt install gcc-15-aarch64-linux-gnu g++-15-aarch64-linux-gnu libllama-dev
 
       - name: Configure
         run: cmake -B build
