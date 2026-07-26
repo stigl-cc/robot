@@ -1,0 +1,40 @@
+name: Build Project
+on: [push, pull_request]
+
+jobs:
+  build-project:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache packages
+        uses: awalsh128/cache-apt-pkgs-action@master
+        with:
+          packages: gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          version: 1.0
+          execute_install_scripts: true
+
+      - name: Configure
+        run: cmake -B build
+
+      - name: Compile
+        run: cmake --build build --clean-first -j12 --config Release
+
+      - name: Upload client-aarch64
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-aarch64
+          path: build/client/client
+
+      - name: Upload client-x86
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-x86
+          path: build/client_native/client
+
+      - name: Upload server
+        uses: actions/upload-artifact@v4
+        with:
+          name: server
+          path: build/client_native/client
