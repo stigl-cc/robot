@@ -26,7 +26,7 @@ bool TcpRecvPacket::isPacketComplete() const {
     return isHeaderComplete() && contents_.size() >= totalLength_;
 }
 
-size_t TcpRecvPacket::write(const std::span<uint8_t>& data) {
+size_t TcpRecvPacket::write(std::span<const uint8_t> data) {
     size_t data_pos = 0, bytes_to_insert = 0;
     if(!isHeaderComplete()) {
         while(headerBytesWritten_ < sizeof(totalLength_) && data_pos < data.size()) {
@@ -52,7 +52,7 @@ const std::vector<uint8_t>& TcpRecvPacket::getBuffer() const {
     return contents_;
 }
 
-TcpSendPacket::TcpSendPacket(const std::span<uint8_t>& data) : readLength_(0), contents_() {
+TcpSendPacket::TcpSendPacket(std::span<const uint8_t> data) : readLength_(0), contents_() {
     packetlen_t total_length = static_cast<packetlen_t>(data.size());
     packetlen_t total_length_le = htole32(total_length);
     contents_.reserve(sizeof(packetlen_t) + data.size());

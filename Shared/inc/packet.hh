@@ -16,7 +16,7 @@ class TcpRecvPacket {
 
     public:
     TcpRecvPacket();
-    size_t write(const std::span<uint8_t>& data);
+    size_t write(std::span<const uint8_t> data);
 
     ssize_t getTotalLength() const;
     ssize_t getLeftToWrite() const;
@@ -34,7 +34,7 @@ class TcpSendPacket {
     std::vector<uint8_t> contents_;
 
     public:
-    TcpSendPacket(const std::span<uint8_t>& data);
+    TcpSendPacket(std::span<const uint8_t> data);
 
     size_t read(uint8_t* buffer, size_t size);
     void advance(size_t size);
