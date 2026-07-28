@@ -20,7 +20,7 @@ class VideoCapture {
     timeval tv = { .tv_sec = 2 };
 
     public:
-    VideoCapture(int index);
+    VideoCapture(int index = 0);
 
     VideoCapture(const VideoCapture&) = delete;
     VideoCapture& operator=(const VideoCapture&) = delete;
@@ -30,7 +30,7 @@ class VideoCapture {
 
     bool open();
 
-    int getVideoBuffer(const void** buffer_ptr);
+    size_t getVideoBuffer(const void** buffer_ptr);
     void captureFrame();
 
     void close();

@@ -55,7 +55,7 @@ bool VideoCapture::open() {
             .pix = {
                 .width = 1280,
                 .height = 720,
-                .pixelformat = V4L2_PIX_FMT_RGB24
+                .pixelformat = V4L2_PIX_FMT_MPEG
             }
         }
     };
@@ -91,9 +91,10 @@ bool VideoCapture::open() {
         return false;
     }
 
-    void* buffer = v4l2_mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, buf.m.offset);
+    video_buffer_len_ = buf.length;
+    video_buffer_ = v4l2_mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, buf.m.offset);
 
-    if(buffer == MAP_FAILED) {
+    if(video_buffer_ == MAP_FAILED) {
         log_tag_no(LOG_ERR, "mmap video buffer(s)");
         return false;
     }
@@ -108,7 +109,7 @@ bool VideoCapture::open() {
 }
 
 
-int VideoCapture::getVideoBuffer(const void** buffer_ptr) {
+size_t VideoCapture::getVideoBuffer(const void** buffer_ptr) {
     *buffer_ptr = static_cast<const void*>(video_buffer_);
     return video_buffer_len_;
 }
@@ -154,7 +155,14 @@ void VideoCapture::close() {
         return;
 
     v4l2_ioctl(fd_, VIDIOC_STREAMOFF, &V4L2_STREAM_TYPE);
-    v4l2_ioctl(fd_, VIDIOC_REQBUFS, 0); // free all buffers - https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/vidioc-reqbufs.html
+
+    // free all v4l2 buffers - https://www.kernel.org/doc/html/v4.10/media/uapi/v4l/vidioc-reqbufs.html
+    struct v4l2_requestbuffers req = {
+        .count = 0,
+        .type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
+        .memory = V4L2_MEMORY_MMAP,
+    };
+    v4l2_ioctl(fd_, VIDIOC_REQBUFS, &req);
 
     if(video_buffer_) {
         v4l2_munmap(video_buffer_, video_buffer_len_);

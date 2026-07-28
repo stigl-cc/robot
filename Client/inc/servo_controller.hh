@@ -13,9 +13,9 @@ class ServoController : private I2cDevice {
     uint32_t oscillator_freq_;
 
     public:
-    ServoController(int i2cAdapter);
+    ServoController(int i2cAdapter = 1);
 
-    bool open(uint8_t prescale);
+    bool open(uint8_t prescale = 0);
     void reset();
     void sleep();
     void wakeUp();

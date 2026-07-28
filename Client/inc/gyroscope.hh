@@ -23,7 +23,7 @@ class Gyroscope : private I2cDevice {
     float temp;
     Vector3 accel, gyro;
 
-    Gyroscope(int i2cAdapter);
+    Gyroscope(int i2cAdapter = 1);
 
     bool open();
     void calibrate();
