@@ -52,7 +52,8 @@ class TcpClient {
     bool reconnect();
 
     public:
-    TcpClient(sockaddr_in server);
+    TcpClient(sockaddr_in serverAddress);
+    TcpClient(std::string ip, uint16_t port);
     TcpClient(const TcpClient&) = delete;
     TcpClient& operator=(const TcpClient&) = delete;
 

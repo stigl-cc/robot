@@ -1,4 +1,5 @@
 #include <i2c_device.hh>
+#include <logger.hh>
 
 #include <format>
 #include <linux/i2c-dev.h>

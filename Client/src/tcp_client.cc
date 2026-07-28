@@ -38,6 +38,15 @@ bool TcpClient::reconnect() {
 TcpClient::TcpClient(sockaddr_in serverAddress)
     : fd_(-1), serverAddress_(serverAddress) {}
 
+TcpClient::TcpClient(std::string ip, uint16_t port) : fd_(-1) {
+    serverAddress_ = {
+        .sin_family = AF_INET,
+        .sin_port = htons(port),
+    };
+
+    inet_pton(AF_INET, ip.c_str(), &serverAddress_.sin_addr);
+}
+
 TcpClient::TcpClient(TcpClient&& other) {
     fd_ = std::exchange(other.fd_, -1);
     memcpy(buffer_, other.buffer_, BUFFER_LEN);
@@ -154,10 +163,6 @@ bool TcpClient::handlePollin() {
             buffer_consumed += recvPacket_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
 
             if(recvPacket_.isPacketComplete()) {
-                std::vector<uint8_t> buffer = recvPacket_.getBuffer();
-                sendPacketQueue_.push(TcpSendPacket(std::span<uint8_t>(buffer.data(), buffer.size())));
-                std::cout << buffer.size() << "\n";
-
                 // TODO: do something with the packet
                 recvPacket_ = {};
             }
