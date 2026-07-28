@@ -1,3 +1,4 @@
+#include "packet.hh"
 #include <language_model.hh>
 #include <tcp_server.hh>
 #include <logger.hh>
@@ -17,7 +18,9 @@ int main() {
 
     TcpServer tcp_server;
     LanguageModel language_model;
-    //language_model.open();
+    language_model.open();
+
+    tcp_server.TEST = [&language_model](TcpRecvPacket a){std::cout << "Loaded media\n"; language_model.load_media(a.getBuffer());};
 
     log(LOG_INFO, "Starting TCP listener");
     tcp_server.open();
@@ -25,6 +28,9 @@ int main() {
     while(should_application_run) {
         tcp_server.update();
     }
+    language_model.load_text("Describe the contents of the image: ");
+    language_model.tokenize_inputs();
+    std::cout << language_model.generate_text() << "\n";
 
     log(LOG_INFO, "Closing TCP listener");
     tcp_server.close();

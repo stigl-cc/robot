@@ -82,7 +82,7 @@ float* LanguageModel::get_embedding(const mtmd_input_chunk *chunk, size_t chunks
 
 void LanguageModel::tokenize_chunk(size_t i, size_t chunks_len, const mtmd::input_chunks& chunks) {
     int ret;
-    llama_pos n_past_new;
+    llama_pos n_past_new = n_past;
 
     const mtmd_input_chunk *chunk = mtmd_input_chunks_get(chunks.ptr.get(), i);
     mtmd_input_chunk_type chunk_type = mtmd_input_chunk_get_type(chunk);
@@ -208,12 +208,13 @@ std::string LanguageModel::generate_text() {
         generated_tokens.push_back(token_id);
         llama_sampler_accept(sampler_.get(), token_id);
 
+        llama_pos pos = n_past;
         llama_batch batch = llama_batch_get_one(&token_id, 1);
+        batch.pos = &pos;
         if(llama_decode(context_.get(), batch) != 0) {
             log_tag(LOG_ERR, "Failed to decode token!");
             break;
-        }
-        n_past++;
+        } else n_past = pos + 1;
 
         std::string piece;
         piece.resize(16);
@@ -247,6 +248,7 @@ std::string LanguageModel::generate_text() {
 
     return output;
 }
+
 
 LanguageModel::LanguageModel() { }
 
@@ -296,7 +298,7 @@ void LanguageModel::open() {
 
     llama_context_params context_params = llama_context_default_params();
     context_params.n_ctx = CONTEXT_LEN;
-    context_params.n_batch = CONTEXT_LEN;
+    context_params.n_batch = 512;
 
     llama_sampler_chain_params sampler_params = llama_sampler_chain_default_params();
 
@@ -337,7 +339,7 @@ void LanguageModel::load_text(std::string text) {
     message_queue_.emplace_back("user", text);
 }
 
-void LanguageModel::load_media(const std::span<uint8_t> data) {
+void LanguageModel::load_media(std::span<const uint8_t> data) {
     auto resource = mtmd_helper_bitmap_init_from_buf(mtmd_context_.get(), data.data(), data.size(), false);
     if(!resource.bitmap) {
         log_tag(LOG_ERR, "Failed to load media!");
@@ -353,16 +355,5 @@ void LanguageModel::close() {
 }
 
 LanguageModel::~LanguageModel() {
-    close();
-}
-
-void LanguageModel::test() {
-    open();
-
-    load_text("How would you describe the effect of donald trump on the economy, say 50events, in the format {actions: [ {\"type\":\"positive\", name: \"increase tarrifs\"} ]}");
-
-    tokenize_inputs();
-    std::cout << generate_text() << "\n";
-
     close();
 }

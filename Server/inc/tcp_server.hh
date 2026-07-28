@@ -2,6 +2,7 @@
 #include <packet.hh>
 #include <socket_options.hh>
 
+#include <functional>
 #include <queue>
 #include <cstdint>
 #include <netinet/in.h>
@@ -53,6 +54,8 @@ class TcpServer {
     bool open();
     void update();
     void close();
+
+    std::function<void(TcpRecvPacket)> TEST;
 
     ~TcpServer();
 };
