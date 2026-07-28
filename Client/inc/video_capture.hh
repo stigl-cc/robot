@@ -6,7 +6,7 @@
 
 class VideoCapture {
     protected:
-    static constexpr std::string_view LOG_TAG = "VideoCapture: ";
+    static constexpr std::string_view LOG_TAG = "VideoCapture";
     const enum v4l2_buf_type
         V4L2_STREAM_TYPE = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
