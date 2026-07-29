@@ -1,6 +1,7 @@
 #pragma once
 #include <packet.hh>
 #include <socket_options.hh>
+#include <callback.hh>
 
 #include <queue>
 #include <cstdint>
@@ -34,6 +35,8 @@ class TcpServer {
     uint8_t buffer_[BUFFER_LEN];
 
     TcpRecvPacket recvPacket_;
+    EventInvoker<const TcpRecvPacket> recvEventInvoker_;
+
     std::queue<TcpSendPacket> sendPacketQueue_;
 
     void handlePollServer(int revents);
@@ -51,7 +54,10 @@ class TcpServer {
     TcpServer& operator=(TcpServer&&);
 
     bool open();
+
+    IEvent<const TcpRecvPacket>& getRecvEvent();
     void update();
+
     void close();
 
     ~TcpServer();

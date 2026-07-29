@@ -25,9 +25,9 @@ class LanguageModel {
 
     uint32_t images_to_mark = 0;
     llama_pos
-        n_past = 0,    // tokens processed
-        n_batch = 512, // tokens to process at a time
-        n_ctx = 8192;  // total tokens in context
+        n_past = 0,           // tokens processed
+        n_batch = 512,        // tokens to process at a time
+        n_ctx = CONTEXT_LEN;  // total tokens in context
     
     std::vector<std::pair<std::string, std::string>> message_queue_;
 
@@ -43,6 +43,10 @@ class LanguageModel {
     mtmd::batch_ptr mtmd_batch_;
 
     std::string format_text_input();
+
+    // TODO: Remove
+    public:
+    // TODO: Remove
 
     float *get_embedding(const mtmd_input_chunk *chunk, size_t chunks_len, const mtmd::input_chunks& chunks);
     void tokenize_chunk(size_t i, size_t chunks_len, const mtmd::input_chunks& chunks);
@@ -63,9 +67,7 @@ class LanguageModel {
     void open();
 
     void load_text(std::string text);
-    void load_media(const std::span<uint8_t> data);
-
-    void test();
+    void load_media(std::span<const uint8_t> data);
 
     void close();
     ~LanguageModel();

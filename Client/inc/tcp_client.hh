@@ -1,6 +1,7 @@
 #pragma once
 #include <socket_options.hh>
 #include <packet.hh>
+#include <callback.hh>
 
 #include <queue>
 #include <cstdint>
@@ -38,6 +39,8 @@ class TcpClient {
     uint8_t buffer_[BUFFER_LEN];
 
     TcpRecvPacket recvPacket_;
+    EventInvoker<const TcpRecvPacket> recvEventInvoker_;
+
     std::queue<TcpSendPacket> sendPacketQueue_;
 
     enum Status status_;
@@ -63,6 +66,8 @@ class TcpClient {
     bool open();
 
     void send(const TcpSendPacket& packet);
+
+    IEvent<const TcpRecvPacket>& getRecvEvent();
 
     Status getStatus() const;
     void update();

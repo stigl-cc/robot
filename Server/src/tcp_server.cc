@@ -1,5 +1,5 @@
-#include <packet.hh>
 #include <tcp_server.hh>
+#include <packet.hh>
 #include <logger.hh>
 
 #include <string>
@@ -139,19 +139,7 @@ bool TcpServer::handlePollinClient() {
         do {
             buffer_consumed += recvPacket_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
             if(recvPacket_.isPacketComplete()) {
-                std::vector<uint8_t> buffer = recvPacket_.getBuffer();
-                std::cout << "[ ";
-
-                for(uint8_t byte : buffer) {
-                    std::cout << std::hex << "0x" << static_cast<int>(byte) << ", ";
-                }
-
-                std::cout << "Length: " << std::dec << buffer.size() << "]\n";
-                buffer.push_back(static_cast<uint8_t>(buffer.size()));
-
-                sendPacketQueue_.push(TcpSendPacket(std::span<uint8_t>(buffer.data(), buffer.size())));
-
-                // TODO: do something with the packet
+                recvEventInvoker_.invoke(recvPacket_);
                 recvPacket_ = {};
             }
         } while(buffer_consumed < ret);
@@ -251,6 +239,10 @@ void TcpServer::close() {
     if(fd_ >= 0) {
         ::close(fd_);
     }
+}
+
+IEvent<const TcpRecvPacket>& TcpServer::getRecvEvent() {
+    return recvEventInvoker_;
 }
 
 TcpServer::~TcpServer() {
