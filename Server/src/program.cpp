@@ -27,6 +27,15 @@ template<typename RandomAccesIterator_> bool check_jpeg_header(RandomAccesIterat
         static_cast<uint8_t>(*(end   - 1)) == 0xD9;
 }
 
+void tcp_recv_task(LanguageModel& language_model, const TcpRecvPacket& packet) {
+    const std::vector<uint8_t>& buffer = packet.getBuffer();
+    // Check if buffer type is a JPEG
+    if(check_jpeg_header(buffer.begin(), buffer.end())) {
+        std::cout << "Loaded JPEG Image\n";
+        language_model.load_media(packet.getBuffer());
+    }
+}
+
 int main() {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
@@ -35,16 +44,7 @@ int main() {
     LanguageModel language_model;
     language_model.open();
 
-    tcp_server.getRecvEvent().subscribe(
-        [&language_model](const TcpRecvPacket& a) {
-            const std::vector<uint8_t>& buffer = a.getBuffer();
-            // Check if buffer type is a JPEG
-            if(check_jpeg_header(buffer.begin(), buffer.end())) {
-                std::cout << "Loaded JPEG Image\n";
-                language_model.load_media(a.getBuffer());
-            }
-        }
-    );
+    tcp_server.getRecvEvent().subscribe(std::bind(tcp_recv_task, std::ref(language_model), std::placeholders::_1));
 
     log(LOG_INFO, "Starting TCP listener");
     tcp_server.open();

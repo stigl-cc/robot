@@ -28,7 +28,7 @@ void video_capture_task(VideoCapture& videoCapture, TcpClient& tcpClient) {
     tcpClient.send(TcpSendPacket(video_buffer_span));
 }
 
-void tcp_recv_task(TcpClient& client, const TcpRecvPacket packet) {
+void tcp_recv_task(TcpClient& client, const TcpRecvPacket& packet) {
 
 }
 
