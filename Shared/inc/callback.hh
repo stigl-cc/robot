@@ -10,11 +10,14 @@ template<typename ...T> class IEvent {
     typedef std::vector<callback_t> callback_list_t;
 
     callback_list_t callback_list_;
-    IEvent();
+    IEvent() = default;
 
     public:
     size_t subscribe(const callback_t&);
     void unsubscribe(size_t id);
+
+    IEvent(const IEvent&) = delete;
+    IEvent& operator=(const IEvent&) = delete;
 };
 
 template<typename ...T> class EventInvoker : public IEvent<T...> {

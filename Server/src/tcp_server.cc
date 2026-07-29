@@ -139,9 +139,7 @@ bool TcpServer::handlePollinClient() {
         do {
             buffer_consumed += recvPacket_.write(std::span<uint8_t>(buffer_ + buffer_consumed, ret - buffer_consumed));
             if(recvPacket_.isPacketComplete()) {
-                TEST(recvPacket_);
-
-                // TODO: do something with the packet
+                recvEventInvoker_.invoke(recvPacket_);
                 recvPacket_ = {};
             }
         } while(buffer_consumed < ret);
@@ -241,6 +239,10 @@ void TcpServer::close() {
     if(fd_ >= 0) {
         ::close(fd_);
     }
+}
+
+IEvent<const TcpRecvPacket>& TcpServer::getRecvEvent() {
+    return recvEventInvoker_;
 }
 
 TcpServer::~TcpServer() {

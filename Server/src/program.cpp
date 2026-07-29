@@ -20,7 +20,12 @@ int main() {
     LanguageModel language_model;
     language_model.open();
 
-    tcp_server.TEST = [&language_model](TcpRecvPacket a){std::cout << "Loaded media\n"; language_model.load_media(a.getBuffer());};
+    tcp_server.getRecvEvent().subscribe(
+        [&language_model](TcpRecvPacket a) {
+            std::cout << "Loaded media\n";
+            language_model.load_media(a.getBuffer());
+        }
+    );
 
     log(LOG_INFO, "Starting TCP listener");
     tcp_server.open();
@@ -28,7 +33,8 @@ int main() {
     while(should_application_run) {
         tcp_server.update();
     }
-    language_model.load_text("Describe the contents of the image: ");
+
+    language_model.load_text("Describe the contents of the image(s): ");
     language_model.tokenize_inputs();
     std::cout << language_model.generate_text() << "\n";
 
