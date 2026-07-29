@@ -1,3 +1,4 @@
+#include <functional>
 #include <packet.hh>
 #include <scheduler.hh>
 #include <logger.hh>
@@ -25,6 +26,10 @@ void video_capture_task(VideoCapture& videoCapture, TcpClient& tcpClient) {
 
     std::span<const uint8_t> video_buffer_span {video_buffer, video_buffer_len};
     tcpClient.send(TcpSendPacket(video_buffer_span));
+}
+
+void tcp_recv_task(TcpClient& client, const TcpRecvPacket packet) {
+
 }
 
 void gyro_update_task(Gyroscope& gyro) {
@@ -77,6 +82,8 @@ int main() {
 
     TcpClient tcp_client("192.168.0.36", 8080);
     log(LOG_INFO, "Starting TCP client");
+
+    tcp_client.getRecvEvent().subscribe(std::bind(tcp_recv_task, std::ref(tcp_client), std::placeholders::_1));
     tcp_client.open();
 
     task_scheduler.registerTask({ std::bind(gyro_update_task, std::ref(gyroscope)), Task::timeunit_t(100), true });

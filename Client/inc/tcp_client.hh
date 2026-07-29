@@ -39,7 +39,7 @@ class TcpClient {
     uint8_t buffer_[BUFFER_LEN];
 
     TcpRecvPacket recvPacket_;
-    EventInvoker<const TcpRecvPacket> recvEventInvoker_;
+    EventInvoker<const TcpRecvPacket&> recvEventInvoker_;
 
     std::queue<TcpSendPacket> sendPacketQueue_;
 
@@ -67,7 +67,7 @@ class TcpClient {
 
     void send(const TcpSendPacket& packet);
 
-    IEvent<const TcpRecvPacket>& getRecvEvent();
+    IEvent<const TcpRecvPacket&>& getRecvEvent();
 
     Status getStatus() const;
     void update();

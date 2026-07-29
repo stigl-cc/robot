@@ -120,7 +120,7 @@ void TcpClient::send(const TcpSendPacket& packet) {
     sendPacketQueue_.push(packet);
 }
 
-IEvent<const TcpRecvPacket>& TcpClient::getRecvEvent() {
+IEvent<const TcpRecvPacket&>& TcpClient::getRecvEvent() {
     return recvEventInvoker_;
 }
 

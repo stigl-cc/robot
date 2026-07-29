@@ -1,15 +1,30 @@
 #include "packet.hh"
+#include <iterator>
 #include <language_model.hh>
 #include <tcp_server.hh>
 #include <logger.hh>
 
 #include <csignal>
 #include <atomic>
+#include <type_traits>
 
 std::atomic<bool> should_application_run = true;
 
 void signal_handler(int) {
     should_application_run = false;
+}
+
+template<typename RandomAccesIterator_> bool check_jpeg_header(RandomAccesIterator_ begin, RandomAccesIterator_ end) {
+    static_assert(std::is_same<uint8_t, std::iter_value_t<RandomAccesIterator_>>::value, "Iterator type not a unit8_t random access iterator!");
+
+    if(std::distance(begin, end) < 4)
+        return false;
+
+    return
+        static_cast<uint8_t>(*(begin    )) == 0xFF &&
+        static_cast<uint8_t>(*(begin + 1)) == 0xD8 &&
+        static_cast<uint8_t>(*(end   - 2)) == 0xFF &&
+        static_cast<uint8_t>(*(end   - 1)) == 0xD9;
 }
 
 int main() {
@@ -21,9 +36,13 @@ int main() {
     language_model.open();
 
     tcp_server.getRecvEvent().subscribe(
-        [&language_model](TcpRecvPacket a) {
-            std::cout << "Loaded media\n";
-            language_model.load_media(a.getBuffer());
+        [&language_model](const TcpRecvPacket& a) {
+            const std::vector<uint8_t>& buffer = a.getBuffer();
+            // Check if buffer type is a JPEG
+            if(check_jpeg_header(buffer.begin(), buffer.end())) {
+                std::cout << "Loaded JPEG Image\n";
+                language_model.load_media(a.getBuffer());
+            }
         }
     );
 

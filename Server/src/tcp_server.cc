@@ -241,7 +241,7 @@ void TcpServer::close() {
     }
 }
 
-IEvent<const TcpRecvPacket>& TcpServer::getRecvEvent() {
+IEvent<const TcpRecvPacket&>& TcpServer::getRecvEvent() {
     return recvEventInvoker_;
 }
 

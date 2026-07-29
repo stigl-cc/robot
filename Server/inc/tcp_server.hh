@@ -35,7 +35,7 @@ class TcpServer {
     uint8_t buffer_[BUFFER_LEN];
 
     TcpRecvPacket recvPacket_;
-    EventInvoker<const TcpRecvPacket> recvEventInvoker_;
+    EventInvoker<const TcpRecvPacket&> recvEventInvoker_;
 
     std::queue<TcpSendPacket> sendPacketQueue_;
 
@@ -55,7 +55,7 @@ class TcpServer {
 
     bool open();
 
-    IEvent<const TcpRecvPacket>& getRecvEvent();
+    IEvent<const TcpRecvPacket&>& getRecvEvent();
     void update();
 
     void close();
