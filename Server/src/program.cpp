@@ -29,7 +29,7 @@ template<typename RandomAccesIterator_> bool check_jpeg_header(RandomAccesIterat
 
 void tcp_recv_task(LanguageModel& language_model, const TcpRecvPacket& packet) {
     const std::vector<uint8_t>& buffer = packet.getBuffer();
-    // Check if buffer type is a JPEG
+
     if(check_jpeg_header(buffer.begin(), buffer.end())) {
         std::cout << "Loaded JPEG Image\n";
         language_model.load_media(packet.getBuffer());

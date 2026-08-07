@@ -60,7 +60,6 @@ void TaskScheduler::worker_thread() {
     }
 
     lock.unlock();
-    cv_.notify_one();
 }
 
 void TaskScheduler::reset_worker() {
@@ -78,12 +77,13 @@ void TaskScheduler::start(bool blocking) {
     thread_ = std::thread(&TaskScheduler::worker_thread, this);
     if(blocking)
         thread_.join();
-    else
-        thread_.detach();
 }
 
 void TaskScheduler::registerTask(const Task& task) {
-    tasks_.push_back(task);
+    {
+        std::lock_guard lock(mutex);
+        tasks_.push_back(task);
+    }
     reset_worker();
 }
 
@@ -93,7 +93,10 @@ TaskScheduler& TaskScheduler::operator+=(const Task& task) {
 }
 
 void TaskScheduler::unregisterTask(const Task& task) {
-    tasks_.erase(std::remove_if(tasks_.begin(), tasks_.end(), [&task](const Task& t){return t == task;}));
+    {
+        std::lock_guard lock(mutex);
+        tasks_.erase(std::remove_if(tasks_.begin(), tasks_.end(), [&task](const Task& t){return t == task;}));
+    }
     reset_worker();
 }
 
@@ -119,7 +122,6 @@ void TaskScheduler::stop() {
     }
 
     cv_.notify_one();
-
-    std::unique_lock lock(mutex);
-    cv_.wait(lock);
+    if(thread_.joinable())
+        thread_.join();
 }
