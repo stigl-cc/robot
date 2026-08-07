@@ -90,7 +90,7 @@ int main() {
     task_scheduler.registerTask({ std::bind(video_capture_task, std::ref(video_capture), std::ref(tcp_client)), Task::timeunit_t(10'000), true });
     task_scheduler.registerTask({ std::bind(tcp_update_task, std::ref(tcp_client)), Task::timeunit_t(100), true });
 
-    task_scheduler.start(false);
+    task_scheduler.start();
 
     while(should_application_run) {
         usleep(10'000);

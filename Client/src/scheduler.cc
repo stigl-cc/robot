@@ -66,7 +66,7 @@ void TaskScheduler::reset_worker() {
     cv_.notify_one();
 }
 
-void TaskScheduler::start(bool blocking) {
+void TaskScheduler::start() {
     if(isWorkerRunning()) {
         log_tag(LOG_WARN, "Attempted to double start worker thread!");
         return;
@@ -75,8 +75,6 @@ void TaskScheduler::start(bool blocking) {
     shouldTaskSchedulerRun_ = true;
 
     thread_ = std::thread(&TaskScheduler::worker_thread, this);
-    if(blocking)
-        thread_.join();
 }
 
 void TaskScheduler::registerTask(const Task& task) {

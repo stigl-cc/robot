@@ -41,7 +41,7 @@ class TaskScheduler {
     void worker_thread();
 
     public:
-    void start(bool blocking);
+    void start();
 
     void registerTask(const Task& task);
     void unregisterTask(const Task& task);
