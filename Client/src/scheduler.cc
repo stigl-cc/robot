@@ -25,7 +25,7 @@ bool Task::checkInvoke() {
         nextExecutionPoint_ = shouldRepeat_
             ? std::max(currentTime, nextExecutionPoint_) + interval_
             : timepoint_t::max();
-        
+
         return true;
     }
     return false;
@@ -124,4 +124,8 @@ void TaskScheduler::stop() {
     cv_.notify_one();
     if(thread_.joinable())
         thread_.join();
+}
+TaskScheduler::~TaskScheduler() {
+    if(isWorkerRunning())
+        stop();
 }

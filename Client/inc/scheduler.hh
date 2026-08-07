@@ -51,4 +51,5 @@ class TaskScheduler {
     bool isWorkerRunning();
 
     void stop();
+    ~TaskScheduler();
 };
